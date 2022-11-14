@@ -2,7 +2,9 @@
 /.env
 
 # additional exclusions irrelevant for published packages
+/.env.example
 /.eslintrc.json
 /.github/
+/.wdio.cjs
 /RELEASE.md
 /test/

@@ -15,6 +15,9 @@ import {
  * The OAuth client, encapsulating the credentials.
  * This option must be specified, there is no possible default value.
  * (It’s recommended to set it in the session’s default options.)
+ * @property {boolean} ['m3api-oauth2/assert']
+ * Whether to set the 'assert' parameter in the session’s defaultParams to 'user'.
+ * Defaults to true.
  */
 
 Object.assign( DEFAULT_OPTIONS, {
@@ -23,6 +26,7 @@ Object.assign( DEFAULT_OPTIONS, {
 			throw new Error( 'The m3api-oauth2/client request option was not specified!' );
 		},
 	},
+	'm3api-oauth2/assert': true,
 } );
 
 /** @private */
@@ -90,7 +94,10 @@ async function getAuthorizeUrl( session, options = {} ) {
  * either here or in the session’s default options.
  */
 async function handleCallback( session, callbackUrl, options = {} ) {
-	const { 'm3api-oauth2/client': client } = {
+	const {
+		'm3api-oauth2/client': client,
+		'm3api-oauth2/assert': assert,
+	} = {
 		...DEFAULT_OPTIONS,
 		...session.defaultOptions,
 		...options,
@@ -110,6 +117,9 @@ async function handleCallback( session, callbackUrl, options = {} ) {
 	}
 
 	session.defaultOptions.authorization = `Bearer ${body.access_token}`;
+	if ( assert ) {
+		session.defaultParams.assert = 'user';
+	}
 }
 
 export {

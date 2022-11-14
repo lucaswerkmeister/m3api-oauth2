@@ -133,6 +133,50 @@ describe( 'handleCallback', () => {
 		expect( called ).to.be.true;
 	} );
 
+	it( 'adds assert to defaultParams', async () => {
+		class TestSession extends BaseTestSession {
+			async internalPost() {
+				return { status: 200, headers: {}, body: {
+					token_type: 'Bearer',
+					expires_in: 14400,
+					access_token: 'ACCESSTOKEN',
+					refresh_token: 'REFRESHTOKEN',
+				} };
+			}
+		}
+
+		const session = new TestSession( {}, {
+			'm3api-oauth2/client': client,
+		} );
+		await handleCallback( session, 'http://localhost?code=CODE' );
+		expect( session.defaultParams ).to.have.property( 'assert', 'user' );
+	} );
+
+	[
+		[ 'defaultOptions', { 'm3api-oauth2/assert': false }, {} ],
+		[ 'options', {}, { 'm3api-oauth2/assert': false } ],
+	].forEach( ( [ name, defaultOptions, options ] ) => {
+		it( `does not add assert to defaultParams with false in ${name}`, async () => {
+			class TestSession extends BaseTestSession {
+				async internalPost() {
+					return { status: 200, headers: {}, body: {
+						token_type: 'Bearer',
+						expires_in: 14400,
+						access_token: 'ACCESSTOKEN',
+						refresh_token: 'REFRESHTOKEN',
+					} };
+				}
+			}
+
+			const session = new TestSession( {}, {
+				...defaultOptions,
+				'm3api-oauth2/client': client,
+			} );
+			await handleCallback( session, 'http://localhost?code=CODE', options );
+			expect( session.defaultParams ).not.to.have.property( 'assert' );
+		} );
+	} );
+
 	it( 'throws if status is not 200', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {

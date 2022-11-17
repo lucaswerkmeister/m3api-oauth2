@@ -47,6 +47,23 @@ console.log( await session.request( {
 } ) );
 ```
 
+This example assumes that you can keep the original `session` instance alive,
+which may be true for a CLI utility, but probably not a web-based application.
+You can serialize the session and store the result in some kind of session store:
+
+```js
+const serialization = serializeOAuthSession( session );
+// store serialization (or JSON.stringify( serialization )) somewhere
+// ...next request...
+// get serialization from somewhere (possibly via JSON.parse())
+deserializeOAuthSession( session, serialization );
+```
+
+Note that you shouldn’t make the serialization directly available to the user
+(e.g., you shouldn’t put it directly in a cookie),
+since that would allow the user to extract the access token and impersonate your application.
+Use a session store instead, e.g. based on Redis if you’re on Wikimedia Toolforge.
+
 ## Limitations
 
 Non-confidential consumers (using PKCE) are not yet supported.
@@ -54,10 +71,6 @@ A client secret is required.
 
 The resulting access token is typically only valid for four hours;
 there is no support for refreshing it yet, neither automatically nor manually.
-
-You must keep the original `session` instance alive;
-there is no support for “serializing” it yet,
-in a way that could be associated with a broader user session.
 
 ## License
 

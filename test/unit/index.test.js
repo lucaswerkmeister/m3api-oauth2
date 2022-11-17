@@ -7,6 +7,8 @@ import {
 	OAuthClient,
 	getAuthorizeUrl,
 	handleCallback,
+	serializeOAuthSession,
+	deserializeOAuthSession,
 } from '../../index.js';
 import { format } from 'util';
 import chai, { expect } from 'chai';
@@ -25,6 +27,17 @@ class BaseTestSession extends Session {
 		} );
 	}
 
+}
+
+class SuccessfulTestSession extends BaseTestSession {
+	async internalPost() {
+		return { status: 200, headers: {}, body: {
+			token_type: 'Bearer',
+			expires_in: 14400,
+			access_token: 'ACCESSTOKEN',
+			refresh_token: 'REFRESHTOKEN',
+		} };
+	}
 }
 
 const client = new OAuthClient( 'CLIENTID', 'CLIENTSECRET' );
@@ -134,18 +147,7 @@ describe( 'handleCallback', () => {
 	} );
 
 	it( 'adds assert to defaultParams', async () => {
-		class TestSession extends BaseTestSession {
-			async internalPost() {
-				return { status: 200, headers: {}, body: {
-					token_type: 'Bearer',
-					expires_in: 14400,
-					access_token: 'ACCESSTOKEN',
-					refresh_token: 'REFRESHTOKEN',
-				} };
-			}
-		}
-
-		const session = new TestSession( {}, {
+		const session = new SuccessfulTestSession( {}, {
 			'm3api-oauth2/client': client,
 		} );
 		await handleCallback( session, 'http://localhost?code=CODE' );
@@ -157,18 +159,7 @@ describe( 'handleCallback', () => {
 		[ 'options', {}, { 'm3api-oauth2/assert': false } ],
 	].forEach( ( [ name, defaultOptions, options ] ) => {
 		it( `does not add assert to defaultParams with false in ${name}`, async () => {
-			class TestSession extends BaseTestSession {
-				async internalPost() {
-					return { status: 200, headers: {}, body: {
-						token_type: 'Bearer',
-						expires_in: 14400,
-						access_token: 'ACCESSTOKEN',
-						refresh_token: 'REFRESHTOKEN',
-					} };
-				}
-			}
-
-			const session = new TestSession( {}, {
+			const session = new SuccessfulTestSession( {}, {
 				...defaultOptions,
 				'm3api-oauth2/client': client,
 			} );
@@ -200,6 +191,74 @@ describe( 'handleCallback', () => {
 	it( 'throws if client option not specified', async () => {
 		expect( handleCallback( new BaseTestSession(), '', {} ) )
 			.to.be.rejectedWith( /m3api-oauth2\/client/ );
+	} );
+
+} );
+
+describe( 'serializeOAuthSession', () => {
+
+	it( 'blank session', () => {
+		const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+		expect( serializeOAuthSession( session ) )
+			.to.eql( {} );
+	} );
+
+	it( 'initialized session', async () => {
+		const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+		await getAuthorizeUrl( session );
+		expect( serializeOAuthSession( session ) )
+			.to.eql( {} );
+	} );
+
+	it( 'finished session', async () => {
+		const session = new SuccessfulTestSession( {}, { 'm3api-oauth2/client': client } );
+		await getAuthorizeUrl( session );
+		await handleCallback( session, 'http:localhost?code=CODE' );
+		expect( serializeOAuthSession( session ) )
+			.to.eql( {
+				accessToken: 'ACCESSTOKEN',
+			} );
+	} );
+
+} );
+
+describe( 'deserializeOAuthSession', () => {
+
+	it( 'blank/initialized session', () => { // no difference yet
+		const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+		deserializeOAuthSession( session, {} );
+		expect( session.defaultOptions ).not.to.have.property( 'authorization' );
+	} );
+
+	describe( 'finished session', () => {
+
+		it( 'adds authorization and assert=user by default', () => {
+			const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+			deserializeOAuthSession( session, {
+				accessToken: 'ACCESSTOKEN',
+			} );
+			expect( session.defaultOptions )
+				.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
+			expect( session.defaultParams )
+				.to.have.property( 'assert', 'user' );
+		} );
+
+		[
+			[ 'defaultOptions', { 'm3api-oauth2/assert': false }, {} ],
+			[ 'options', {}, { 'm3api-oauth2/assert': false } ],
+		].forEach( ( [ name, defaultOptions, options ] ) => {
+			it( `does not add assert to defaultParams with false in ${name}`, () => {
+				const session = new SuccessfulTestSession( {}, {
+					...defaultOptions,
+					'm3api-oauth2/client': client,
+				} );
+				deserializeOAuthSession( session, {
+					accessToken: 'ACCESSTOKEN',
+				}, options );
+				expect( session.defaultParams ).not.to.have.property( 'assert' );
+			} );
+		} );
+
 	} );
 
 } );

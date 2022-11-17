@@ -4,7 +4,13 @@ import fs from 'fs';
 import process from 'process';
 
 import Session, { set } from 'm3api/node.js';
-import { OAuthClient, getAuthorizeUrl, handleCallback } from '../../index.js';
+import {
+	OAuthClient,
+	getAuthorizeUrl,
+	handleCallback,
+	serializeOAuthSession,
+	deserializeOAuthSession,
+} from '../../index.js';
 
 const userAgent = 'm3api-oauth2-integration-tests (https://github.com/lucaswerkmeister/m3api-oauth2/)';
 
@@ -87,22 +93,31 @@ describe( 'm3api-oauth2', () => {
 	} );
 
 	it( 'node.js', async () => {
-		const session = new Session( 'test.wikipedia.beta.wmflabs.org', {
+		const makeSession = () => new Session( 'test.wikipedia.beta.wmflabs.org', {
 			formatversion: 2,
 		}, {
 			userAgent,
 			'm3api-oauth2/client': new OAuthClient( oauthClientId, oauthClientSecret ),
 		} );
+
+		let session = makeSession();
 		const authorizeUrl = await getAuthorizeUrl( session );
+		let serialization = serializeOAuthSession( session );
 		await browser.url( authorizeUrl );
 		await $( '#mw-mwoauth-accept button' ).waitForExist();
 		await $( '#mw-mwoauth-accept button' ).click();
 		await browser.waitUntil( async () => {
 			return ( await browser.getUrl() ) !== authorizeUrl;
 		} );
-		const callbackUrl = await browser.getUrl();
-		await handleCallback( session, callbackUrl );
 
+		const callbackUrl = await browser.getUrl();
+		session = makeSession();
+		deserializeOAuthSession( session, serialization );
+		await handleCallback( session, callbackUrl );
+		serialization = serializeOAuthSession( session );
+
+		session = makeSession();
+		deserializeOAuthSession( session, serialization );
 		const response = await session.request( {
 			action: 'query',
 			meta: set( 'userinfo' ),

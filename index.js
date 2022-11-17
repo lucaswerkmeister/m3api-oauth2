@@ -31,6 +31,8 @@ Object.assign( DEFAULT_OPTIONS, {
 
 /** @private */
 const secretTokenSymbol = Symbol( 'OAuthClient.secretToken' );
+/** @private */
+const accessTokenSymbol = Symbol( 'accessToken' );
 
 /**
  * An OAuth 2.0 client, encapsulating the public consumer token (or client ID)
@@ -46,9 +48,7 @@ class OAuthClient {
 		/** @public */
 		this.consumerToken = consumerToken;
 		/** @private */
-		Object.defineProperty( this, secretTokenSymbol, {
-			value: secretToken,
-		} );
+		Object.defineProperty( this, secretTokenSymbol, { value: secretToken } );
 	}
 
 }
@@ -96,7 +96,7 @@ async function getAuthorizeUrl( session, options = {} ) {
 async function handleCallback( session, callbackUrl, options = {} ) {
 	const {
 		'm3api-oauth2/client': client,
-		'm3api-oauth2/assert': assert,
+		// 'm3api-oauth2/assert' handled in deserializeOAuthSession()
 	} = {
 		...DEFAULT_OPTIONS,
 		...session.defaultOptions,
@@ -116,9 +116,69 @@ async function handleCallback( session, callbackUrl, options = {} ) {
 		throw new Error( `OAuth request returned non-200 HTTP status code: ${status}` );
 	}
 
-	session.defaultOptions.authorization = `Bearer ${body.access_token}`;
-	if ( assert ) {
-		session.defaultParams.assert = 'user';
+	const accessToken = body.access_token;
+	deserializeOAuthSession( session, { accessToken }, options );
+}
+
+/**
+ * Serialize the OAuth components of the given session,
+ * so they can be stored in the user session (in some kind of session store).
+ *
+ * You should NOT let the user directly access the serialization
+ * (e.g. by storing it in a cookie) –
+ * that would let them impersonate your application
+ * by making requests directly that appear to come from your app.
+ *
+ * The serialization is an opaque value,
+ * JSON-serializable but otherwise only suitable
+ * for passing it into {@link deserializeOAuthSession}.
+ * Don’t do anything else with it.
+ *
+ * @param {Session} session The session whose OAuth components should be serialized.
+ * @param {Options} [options] Included for consistency with the other functions;
+ * currently does nothing.
+ * @return {Object.<string, string>} A JSON-serializable object
+ * with unspecified structure.
+ * Passing a copy of this object into {@link deserializeOAuthSession}
+ * will make another session equivalent as far as OAuth is concerned.
+ */
+// eslint-disable-next-line no-unused-vars
+function serializeOAuthSession( session, options = {} ) {
+	const serialization = {};
+	if ( Object.prototype.hasOwnProperty.call( session, accessTokenSymbol ) ) {
+		serialization.accessToken = session[ accessTokenSymbol ];
+	}
+	return serialization;
+}
+
+/**
+ * Deserialize OAuth components into the given session,
+ * making it equivalent to the session the serialization came from
+ * (as far as OAuth is concerned).
+ *
+ * @param {Session} session The session that the serialization should be applied to.
+ * @param {Object.<string, string>} serialization A serialization that was
+ * returned by {@link serializeOAuthSession} (and possibly JSON-serialized in between).
+ * @param {Options} [options] The 'm3api-oauth2/assert' option
+ * has the same meaning here as in {@link handleCallback};
+ * if you customize the options, it’s recommended to pass the same options to both functions.
+ */
+function deserializeOAuthSession( session, serialization, options = {} ) {
+	const {
+		'm3api-oauth2/assert': assert,
+	} = {
+		...DEFAULT_OPTIONS,
+		...session.defaultOptions,
+		...options,
+	};
+
+	if ( Object.prototype.hasOwnProperty.call( serialization, 'accessToken' ) ) {
+		const accessToken = serialization.accessToken;
+		Object.defineProperty( session, accessTokenSymbol, { value: accessToken } );
+		session.defaultOptions.authorization = `Bearer ${accessToken}`;
+		if ( assert ) {
+			session.defaultParams.assert = 'user';
+		}
 	}
 }
 
@@ -126,4 +186,6 @@ export {
 	OAuthClient,
 	getAuthorizeUrl,
 	handleCallback,
+	serializeOAuthSession,
+	deserializeOAuthSession,
 };

@@ -8,6 +8,7 @@ import {
 	OAuthClient,
 	initOAuthSession,
 	completeOAuthSession,
+	refreshOAuthSession,
 	serializeOAuthSession,
 	deserializeOAuthSession,
 } from '../../index.js';
@@ -118,7 +119,17 @@ describe( 'm3api-oauth2', () => {
 
 		session = makeSession();
 		deserializeOAuthSession( session, serialization );
-		const response = await session.request( {
+		let response = await session.request( {
+			action: 'query',
+			meta: set( 'userinfo' ),
+		} );
+		expect( response.query.userinfo ).not.toHaveProperty( 'anon' );
+		expect( response.query.userinfo ).toHaveProperty( 'name', mediawikiUsername );
+
+		session = makeSession();
+		deserializeOAuthSession( session, serialization );
+		await refreshOAuthSession( session );
+		response = await session.request( {
 			action: 'query',
 			meta: set( 'userinfo' ),
 		} );

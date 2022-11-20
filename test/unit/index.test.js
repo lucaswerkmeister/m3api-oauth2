@@ -7,6 +7,7 @@ import {
 	OAuthClient,
 	initOAuthSession,
 	completeOAuthSession,
+	refreshOAuthSession,
 	serializeOAuthSession,
 	deserializeOAuthSession,
 } from '../../index.js';
@@ -195,6 +196,82 @@ describe( 'completeOAuthSession', () => {
 
 } );
 
+describe( 'refreshOAuthSession', () => {
+
+	it( 'renews access token and refresh token', async () => {
+		let called = false;
+		class TestSession extends BaseTestSession {
+			async internalPost( apiUrl, urlParams, bodyParams ) {
+				expect( apiUrl ).to.equal( 'https://en.wikipedia.org/w/rest.php/oauth2/access_token' );
+				expect( urlParams ).to.eql( {} );
+				expect( bodyParams ).to.eql( {
+					grant_type: 'refresh_token',
+					refresh_token: 'REFRESHTOKEN1',
+					client_id: 'CLIENTID',
+					client_secret: 'CLIENTSECRET',
+				} );
+				expect( called, 'not called yet' ).to.be.false;
+				called = true;
+				return {
+					status: 200,
+					headers: {},
+					body: {
+						token_type: 'Bearer',
+						expires_in: 14400,
+						access_token: 'ACCESSTOKEN2',
+						refresh_token: 'REFRESHTOKEN2',
+					},
+				};
+			}
+		}
+
+		const session = new TestSession( {}, { 'm3api-oauth2/client': client } );
+		deserializeOAuthSession( session, {
+			accessToken: 'ACCESSTOKEN1',
+			refreshToken: 'REFRESHTOKEN1',
+		} );
+		await refreshOAuthSession( session );
+		expect( serializeOAuthSession( session ) ).to.eql( {
+			accessToken: 'ACCESSTOKEN2',
+			refreshToken: 'REFRESHTOKEN2',
+		} );
+		expect( called ).to.be.true;
+	} );
+
+	it( 'keeps old refresh token if no new refresh token returned', async () => {
+		let called = false;
+		class TestSession extends BaseTestSession {
+			async internalPost() {
+				expect( called, 'not called yet' ).to.be.false;
+				called = true;
+				return {
+					status: 200,
+					headers: {},
+					body: {
+						token_type: 'Bearer',
+						expires_in: 14400,
+						access_token: 'ACCESSTOKEN2',
+						// no refresh_token
+					},
+				};
+			}
+		}
+
+		const session = new TestSession( {}, { 'm3api-oauth2/client': client } );
+		deserializeOAuthSession( session, {
+			accessToken: 'ACCESSTOKEN1',
+			refreshToken: 'REFRESHTOKEN1',
+		} );
+		await refreshOAuthSession( session );
+		expect( serializeOAuthSession( session ) ).to.eql( {
+			accessToken: 'ACCESSTOKEN2',
+			refreshToken: 'REFRESHTOKEN1',
+		} );
+		expect( called ).to.be.true;
+	} );
+
+} );
+
 describe( 'serializeOAuthSession', () => {
 
 	it( 'blank session', () => {
@@ -217,6 +294,7 @@ describe( 'serializeOAuthSession', () => {
 		expect( serializeOAuthSession( session ) )
 			.to.eql( {
 				accessToken: 'ACCESSTOKEN',
+				refreshToken: 'REFRESHTOKEN',
 			} );
 	} );
 
@@ -241,6 +319,17 @@ describe( 'deserializeOAuthSession', () => {
 				.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
 			expect( session.defaultParams )
 				.to.have.property( 'assert', 'user' );
+		} );
+
+		it( 'preserves refresh token', () => {
+			const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+			deserializeOAuthSession( session, {
+				refreshToken: 'REFRESHTOKEN',
+			} );
+			// we can’t see the refresh token in the session,
+			// so just serialize it again to check that it’s there
+			expect( serializeOAuthSession( session ) )
+				.to.have.property( 'refreshToken', 'REFRESHTOKEN' );
 		} );
 
 		[

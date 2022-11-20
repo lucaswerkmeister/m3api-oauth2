@@ -5,8 +5,8 @@
 import { Session } from 'm3api/core.js';
 import {
 	OAuthClient,
-	getAuthorizeUrl,
-	handleCallback,
+	initOAuthSession,
+	completeOAuthSession,
 	serializeOAuthSession,
 	deserializeOAuthSession,
 } from '../../index.js';
@@ -55,7 +55,7 @@ describe( 'OAuthClient', () => {
 
 } );
 
-describe( 'getAuthorizeUrl', () => {
+describe( 'initOAuthSession', () => {
 
 	for ( const [ name, defaultOptions, options ] of [
 		[ 'defaultOptions', { 'm3api-oauth2/client': client }, {} ],
@@ -63,19 +63,19 @@ describe( 'getAuthorizeUrl', () => {
 	] ) {
 		it( `gets client from ${name}`, async () => {
 			const session = new BaseTestSession( {}, defaultOptions );
-			expect( await getAuthorizeUrl( session, options ) )
+			expect( await initOAuthSession( session, options ) )
 				.to.equal( 'https://en.wikipedia.org/w/rest.php/oauth2/authorize?response_type=code&client_id=CLIENTID' );
 		} );
 	}
 
 	it( 'throws if client option not specified', async () => {
-		await expect( getAuthorizeUrl( new BaseTestSession(), {} ) )
+		await expect( initOAuthSession( new BaseTestSession(), {} ) )
 			.to.be.rejectedWith( /m3api-oauth2\/client/ );
 	} );
 
 } );
 
-describe( 'handleCallback', () => {
+describe( 'completeOAuthSession', () => {
 
 	for ( const [ name, defaultOptions, options ] of [
 		[ 'defaultOptions', { 'm3api-oauth2/client': client }, {} ],
@@ -109,7 +109,7 @@ describe( 'handleCallback', () => {
 			}
 
 			const session = new TestSession( {}, defaultOptions );
-			await handleCallback( session, 'http://localhost:12345/oauth/callback?code=CODE', options );
+			await completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE', options );
 			expect( session.defaultOptions )
 				.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
 			expect( called ).to.be.true;
@@ -142,7 +142,7 @@ describe( 'handleCallback', () => {
 			userAgent: 'my-user-agent',
 			'm3api-oauth2/client': client,
 		} );
-		await handleCallback( session, 'http://localhost:12345/oauth/callback?code=CODE' );
+		await completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE' );
 		expect( called ).to.be.true;
 	} );
 
@@ -150,7 +150,7 @@ describe( 'handleCallback', () => {
 		const session = new SuccessfulTestSession( {}, {
 			'm3api-oauth2/client': client,
 		} );
-		await handleCallback( session, 'http://localhost?code=CODE' );
+		await completeOAuthSession( session, 'http://localhost?code=CODE' );
 		expect( session.defaultParams ).to.have.property( 'assert', 'user' );
 	} );
 
@@ -163,7 +163,7 @@ describe( 'handleCallback', () => {
 				...defaultOptions,
 				'm3api-oauth2/client': client,
 			} );
-			await handleCallback( session, 'http://localhost?code=CODE', options );
+			await completeOAuthSession( session, 'http://localhost?code=CODE', options );
 			expect( session.defaultParams ).not.to.have.property( 'assert' );
 		} );
 	} );
@@ -183,13 +183,13 @@ describe( 'handleCallback', () => {
 		}
 
 		const session = new TestSession( {}, { 'm3api-oauth2/client': client } );
-		await expect( handleCallback( session, 'http://localhost:12345/oauth/callback?code=CODE' ) )
+		await expect( completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE' ) )
 			.to.be.rejectedWith( /500/ );
 		expect( called ).to.be.true;
 	} );
 
 	it( 'throws if client option not specified', async () => {
-		expect( handleCallback( new BaseTestSession(), '', {} ) )
+		expect( completeOAuthSession( new BaseTestSession(), '', {} ) )
 			.to.be.rejectedWith( /m3api-oauth2\/client/ );
 	} );
 
@@ -205,15 +205,15 @@ describe( 'serializeOAuthSession', () => {
 
 	it( 'initialized session', async () => {
 		const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
-		await getAuthorizeUrl( session );
+		await initOAuthSession( session );
 		expect( serializeOAuthSession( session ) )
 			.to.eql( {} );
 	} );
 
 	it( 'finished session', async () => {
 		const session = new SuccessfulTestSession( {}, { 'm3api-oauth2/client': client } );
-		await getAuthorizeUrl( session );
-		await handleCallback( session, 'http:localhost?code=CODE' );
+		await initOAuthSession( session );
+		await completeOAuthSession( session, 'http:localhost?code=CODE' );
 		expect( serializeOAuthSession( session ) )
 			.to.eql( {
 				accessToken: 'ACCESSTOKEN',

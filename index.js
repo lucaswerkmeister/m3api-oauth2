@@ -61,7 +61,7 @@ class OAuthClient {
  * Get the URL to authorize a user.
  *
  * You should send the user to this URL,
- * then later call {@link handleCallback} once they’ve been redirected back to you.
+ * then later call {@link completeOAuthSession} once they’ve been redirected back to you.
  *
  * This function needs to be async for technical reasons,
  * but should resolve basically immediately
@@ -73,7 +73,7 @@ class OAuthClient {
  * either here or in the session’s default options.
  * @return {string}
  */
-async function getAuthorizeUrl( session, options = {} ) {
+async function initOAuthSession( session, options = {} ) {
 	const { 'm3api-oauth2/client': client } = {
 		...DEFAULT_OPTIONS,
 		...session.defaultOptions,
@@ -87,7 +87,7 @@ async function getAuthorizeUrl( session, options = {} ) {
 /**
  * Handle an authorization callback from the user.
  *
- * Call this method when the user returns from the {@link getAuthorizeUrl} result,
+ * Call this method when the user returns from the {@link initOAuthSession} result,
  * with the full URL they were redirected to.
  * The session will be set up for authenticated requests.
  *
@@ -97,7 +97,7 @@ async function getAuthorizeUrl( session, options = {} ) {
  * The 'm3api-oauth2/client' option must be specified
  * either here or in the session’s default options.
  */
-async function handleCallback( session, callbackUrl, options = {} ) {
+async function completeOAuthSession( session, callbackUrl, options = {} ) {
 	const {
 		'm3api-oauth2/client': client,
 		// 'm3api-oauth2/assert' handled in deserializeOAuthSession()
@@ -164,7 +164,7 @@ function serializeOAuthSession( session, options = {} ) {
  * @param {Object.<string, string>} serialization A serialization that was
  * returned by {@link serializeOAuthSession} (and possibly JSON-serialized in between).
  * @param {Options} [options] The 'm3api-oauth2/assert' option
- * has the same meaning here as in {@link handleCallback};
+ * has the same meaning here as in {@link completeOAuthSession};
  * if you customize the options, it’s recommended to pass the same options to both functions.
  */
 function deserializeOAuthSession( session, serialization, options = {} ) {
@@ -188,8 +188,8 @@ function deserializeOAuthSession( session, serialization, options = {} ) {
 
 export {
 	OAuthClient,
-	getAuthorizeUrl,
-	handleCallback,
+	initOAuthSession,
+	completeOAuthSession,
 	serializeOAuthSession,
 	deserializeOAuthSession,
 };

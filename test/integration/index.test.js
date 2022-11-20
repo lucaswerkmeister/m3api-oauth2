@@ -6,8 +6,8 @@ import process from 'process';
 import Session, { set } from 'm3api/node.js';
 import {
 	OAuthClient,
-	getAuthorizeUrl,
-	handleCallback,
+	initOAuthSession,
+	completeOAuthSession,
 	serializeOAuthSession,
 	deserializeOAuthSession,
 } from '../../index.js';
@@ -101,7 +101,7 @@ describe( 'm3api-oauth2', () => {
 		} );
 
 		let session = makeSession();
-		const authorizeUrl = await getAuthorizeUrl( session );
+		const authorizeUrl = await initOAuthSession( session );
 		let serialization = serializeOAuthSession( session );
 		await browser.url( authorizeUrl );
 		await $( '#mw-mwoauth-accept button' ).waitForExist();
@@ -113,7 +113,7 @@ describe( 'm3api-oauth2', () => {
 		const callbackUrl = await browser.getUrl();
 		session = makeSession();
 		deserializeOAuthSession( session, serialization );
-		await handleCallback( session, callbackUrl );
+		await completeOAuthSession( session, callbackUrl );
 		serialization = serializeOAuthSession( session );
 
 		session = makeSession();

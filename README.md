@@ -10,7 +10,7 @@ and attach it to an m3api session in the request options:
 
 ```js
 import Session from 'm3api/node.js';
-import { OAuthClient, getAuthorizeUrl, handleCallback } from 'm3api-oauth2';
+import { OAuthClient, initOAuthSession, completeOAuthSession } from 'm3api-oauth2';
 
 const session = new Session( 'en.wikipedia.org', {}, {
 	userAgent: 'm3api-oauth2-README-example',
@@ -24,7 +24,7 @@ const session = new Session( 'en.wikipedia.org', {}, {
 Generate the authorization URL for the user:
 
 ```js
-console.log( await getAuthorizeUrl( session ) );
+console.log( await initOAuthSession( session ) );
 ```
 
 Send the user to that URL (e.g. via a redirect from your application).
@@ -32,7 +32,7 @@ When they choose to authorize your app, they will be redirected back to you;
 use that URL to finish setting up the session:
 
 ```js
-await handleCallback( session, callbackUrl );
+await completeOAuthSession( session, callbackUrl );
 ```
 
 (The `callbackUrl` should look like the URL you registered the OAuth client with,

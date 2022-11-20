@@ -58,7 +58,8 @@ class OAuthClient {
 }
 
 /**
- * Get the URL to authorize a user.
+ * Initialize an OAuth session,
+ * and generate the URL to authorize a user.
  *
  * You should send the user to this URL,
  * then later call {@link completeOAuthSession} once they’ve been redirected back to you.
@@ -67,7 +68,7 @@ class OAuthClient {
  * but should resolve basically immediately
  * (no server communication is involved).
  *
- * @param {Session} session The session with which the authorization will be associated.
+ * @param {Session} session The m3api session with which the authorization will be associated.
  * @param {Options} [options] Request options.
  * The 'm3api-oauth2/client' option must be specified
  * either here or in the session’s default options.
@@ -85,13 +86,15 @@ async function initOAuthSession( session, options = {} ) {
 }
 
 /**
- * Handle an authorization callback from the user.
+ * Handle an authorization callback from the user,
+ * and complete an OAuth session.
  *
  * Call this method when the user returns from the {@link initOAuthSession} result,
  * with the full URL they were redirected to.
- * The session will be set up for authenticated requests.
+ * The m3api session will be set up for authenticated requests
+ * (becoming an OAuth session).
  *
- * @param {Session} session The session to which the authorization will apply.
+ * @param {Session} session The m3api session to which the authorization will apply.
  * @param {string} callbackUrl The URL the user was redirected to.
  * @param {Options} [options] Request options.
  * The 'm3api-oauth2/client' option must be specified
@@ -125,7 +128,7 @@ async function completeOAuthSession( session, callbackUrl, options = {} ) {
 }
 
 /**
- * Serialize the OAuth components of the given session,
+ * Serialize the OAuth components of the given OAuth session,
  * so they can be stored in the user session (in some kind of session store).
  *
  * You should NOT let the user directly access the serialization
@@ -138,13 +141,13 @@ async function completeOAuthSession( session, callbackUrl, options = {} ) {
  * for passing it into {@link deserializeOAuthSession}.
  * Don’t do anything else with it.
  *
- * @param {Session} session The session whose OAuth components should be serialized.
+ * @param {Session} session The OAuth session whose OAuth components should be serialized.
  * @param {Options} [options] Included for consistency with the other functions;
  * currently does nothing.
  * @return {Object.<string, string>} A JSON-serializable object
  * with unspecified structure.
  * Passing a copy of this object into {@link deserializeOAuthSession}
- * will make another session equivalent as far as OAuth is concerned.
+ * will turn another m3api session into an OAuth session equivalent to this one.
  */
 // eslint-disable-next-line no-unused-vars
 function serializeOAuthSession( session, options = {} ) {
@@ -156,11 +159,10 @@ function serializeOAuthSession( session, options = {} ) {
 }
 
 /**
- * Deserialize OAuth components into the given session,
- * making it equivalent to the session the serialization came from
- * (as far as OAuth is concerned).
+ * Deserialize OAuth components into the given m3api session,
+ * turning it into an OAuth session equivalent to the one the serialization came from.
  *
- * @param {Session} session The session that the serialization should be applied to.
+ * @param {Session} session The m3api session that the serialization should be applied to.
  * @param {Object.<string, string>} serialization A serialization that was
  * returned by {@link serializeOAuthSession} (and possibly JSON-serialized in between).
  * @param {Options} [options] The 'm3api-oauth2/assert' option

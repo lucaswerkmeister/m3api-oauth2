@@ -118,6 +118,14 @@ A client secret is required.
 Sessions aren’t refreshed automatically yet,
 you need to call `refreshOAuthSession( session )` manually.
 
+## Compatibility
+
+m3api-oauth2 is *not* compatible with all platforms supported by m3api;
+specifically, it additionaly requires support for dynamic imports
+(which most browsers supported a handful of releases later than the static imports required by m3api)
+and the Web Crypto API methods `crypto.getRandomValues()` and `crypto.subtle.digest()`
+(available in all m3api-supported browsers, but in Node only since version 16).
+
 ## License
 
 Published under the [ISC License][].

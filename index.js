@@ -1,10 +1,25 @@
 /* eslint camelcase: off */
 // OAuth 2.0 POST parameters use underscores
-/* globals crypto, btoa */
 
 import {
 	DEFAULT_OPTIONS,
 } from 'm3api/core.js';
+
+/**
+ * Get an instance of the Web Crypto API.
+ *
+ * @private
+ * @return {Crypto}
+ */
+async function webCrypto() {
+	if ( typeof crypto !== 'undefined' ) {
+		return crypto; // eslint-disable-line no-undef
+	} else if ( typeof global === 'object' ) {
+		return ( await import( 'node:crypto' ) ).webcrypto;
+	} else {
+		throw new Error( 'Web Crypto API not supported!' );
+	}
+}
 
 /**
  * Request options understood by this package.
@@ -85,7 +100,7 @@ async function initOAuthSession( session, options = {} ) {
 		...session.defaultOptions,
 		...options,
 	};
-	const codeVerifier = newCodeVerifier();
+	const codeVerifier = await newCodeVerifier();
 	Object.defineProperty( session, codeVerifierSymbol, {
 		value: codeVerifier,
 		configurable: true,
@@ -110,9 +125,9 @@ async function initOAuthSession( session, options = {} ) {
  * @private
  * @return {string}
  */
-function newCodeVerifier() {
+async function newCodeVerifier() {
 	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz_~';
-	const bytes = crypto.getRandomValues( new Uint8Array( 43 ) );
+	const bytes = ( await webCrypto() ).getRandomValues( new Uint8Array( 43 ) );
 	let verifier = '';
 	for ( let i = 0; i < 43; i++ ) {
 		// eslint-disable-next-line no-bitwise
@@ -129,10 +144,13 @@ function newCodeVerifier() {
  * @return {Object} To be mixed into the authorization request parameters.
  */
 async function getCodeChallenge( codeVerifier ) {
+	if ( typeof btoa !== 'function' ) {
+		throw new Error( 'btoa() (Base64-encode) is required!' );
+	}
 	const codeVerifierBytes = new TextEncoder().encode( codeVerifier );
-	const hashBytes = await crypto.subtle.digest( 'SHA-256', codeVerifierBytes );
+	const hashBytes = await ( await webCrypto() ).subtle.digest( 'SHA-256', codeVerifierBytes );
 	const hashString = String.fromCharCode.apply( null, new Uint8Array( hashBytes ) );
-	const codeChallenge = btoa( hashString )
+	const codeChallenge = btoa( hashString ) // eslint-disable-line no-undef
 		.replace( /\+/g, '-' )
 		.replace( /\//g, '_' )
 		.replace( /=+$/, '' );

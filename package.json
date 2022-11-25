@@ -22,7 +22,7 @@
 	"author": "Lucas Werkmeister <mail@lucaswerkmeister.de>",
 	"license": "ISC",
 	"engines": {
-		"node": ">=19"
+		"node": "^16 || ^18 || >=19"
 	},
 	"peerDependencies": {
 		"m3api": "^0.7.2"

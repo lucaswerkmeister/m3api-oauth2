@@ -42,6 +42,7 @@ class SuccessfulTestSession extends BaseTestSession {
 }
 
 const client = new OAuthClient( 'CLIENTID', 'CLIENTSECRET' );
+const clientOptions = { 'm3api-oauth2/client': client };
 
 describe( 'OAuthClient', () => {
 
@@ -59,8 +60,8 @@ describe( 'OAuthClient', () => {
 describe( 'initOAuthSession', () => {
 
 	for ( const [ name, defaultOptions, options ] of [
-		[ 'defaultOptions', { 'm3api-oauth2/client': client }, {} ],
-		[ 'defaultOptions', {}, { 'm3api-oauth2/client': client } ],
+		[ 'defaultOptions', clientOptions, {} ],
+		[ 'defaultOptions', {}, clientOptions ],
 	] ) {
 		it( `gets client from ${name}`, async () => {
 			const session = new BaseTestSession( {}, defaultOptions );
@@ -79,8 +80,8 @@ describe( 'initOAuthSession', () => {
 describe( 'completeOAuthSession', () => {
 
 	for ( const [ name, defaultOptions, options ] of [
-		[ 'defaultOptions', { 'm3api-oauth2/client': client }, {} ],
-		[ 'defaultOptions', {}, { 'm3api-oauth2/client': client } ],
+		[ 'defaultOptions', clientOptions, {} ],
+		[ 'defaultOptions', {}, clientOptions ],
 	] ) {
 		it( `gets client from ${name} and gets access token`, async () => {
 			let called = false;
@@ -141,7 +142,7 @@ describe( 'completeOAuthSession', () => {
 
 		const session = new TestSession( {}, {
 			userAgent: 'my-user-agent',
-			'm3api-oauth2/client': client,
+			...clientOptions,
 		} );
 		await completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE' );
 		expect( called ).to.be.true;
@@ -149,7 +150,7 @@ describe( 'completeOAuthSession', () => {
 
 	it( 'adds assert to defaultParams', async () => {
 		const session = new SuccessfulTestSession( {}, {
-			'm3api-oauth2/client': client,
+			...clientOptions,
 		} );
 		await completeOAuthSession( session, 'http://localhost?code=CODE' );
 		expect( session.defaultParams ).to.have.property( 'assert', 'user' );
@@ -162,7 +163,7 @@ describe( 'completeOAuthSession', () => {
 		it( `does not add assert to defaultParams with false in ${name}`, async () => {
 			const session = new SuccessfulTestSession( {}, {
 				...defaultOptions,
-				'm3api-oauth2/client': client,
+				...clientOptions,
 			} );
 			await completeOAuthSession( session, 'http://localhost?code=CODE', options );
 			expect( session.defaultParams ).not.to.have.property( 'assert' );
@@ -183,7 +184,7 @@ describe( 'completeOAuthSession', () => {
 			}
 		}
 
-		const session = new TestSession( {}, { 'm3api-oauth2/client': client } );
+		const session = new TestSession( {}, clientOptions );
 		await expect( completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE' ) )
 			.to.be.rejectedWith( /500/ );
 		expect( called ).to.be.true;
@@ -225,7 +226,7 @@ describe( 'refreshOAuthSession', () => {
 			}
 		}
 
-		const session = new TestSession( {}, { 'm3api-oauth2/client': client } );
+		const session = new TestSession( {}, clientOptions );
 		deserializeOAuthSession( session, {
 			accessToken: 'ACCESSTOKEN1',
 			refreshToken: 'REFRESHTOKEN1',
@@ -257,7 +258,7 @@ describe( 'refreshOAuthSession', () => {
 			}
 		}
 
-		const session = new TestSession( {}, { 'm3api-oauth2/client': client } );
+		const session = new TestSession( {}, clientOptions );
 		deserializeOAuthSession( session, {
 			accessToken: 'ACCESSTOKEN1',
 			refreshToken: 'REFRESHTOKEN1',
@@ -275,20 +276,20 @@ describe( 'refreshOAuthSession', () => {
 describe( 'serializeOAuthSession', () => {
 
 	it( 'blank session', () => {
-		const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+		const session = new BaseTestSession( {}, clientOptions );
 		expect( serializeOAuthSession( session ) )
 			.to.eql( {} );
 	} );
 
 	it( 'initialized session', async () => {
-		const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+		const session = new BaseTestSession( {}, clientOptions );
 		await initOAuthSession( session );
 		expect( serializeOAuthSession( session ) )
 			.to.eql( {} );
 	} );
 
 	it( 'finished session', async () => {
-		const session = new SuccessfulTestSession( {}, { 'm3api-oauth2/client': client } );
+		const session = new SuccessfulTestSession( {}, clientOptions );
 		await initOAuthSession( session );
 		await completeOAuthSession( session, 'http:localhost?code=CODE' );
 		expect( serializeOAuthSession( session ) )
@@ -303,7 +304,7 @@ describe( 'serializeOAuthSession', () => {
 describe( 'deserializeOAuthSession', () => {
 
 	it( 'blank/initialized session', () => { // no difference yet
-		const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+		const session = new BaseTestSession( {}, clientOptions );
 		deserializeOAuthSession( session, {} );
 		expect( session.defaultOptions ).not.to.have.property( 'authorization' );
 	} );
@@ -311,7 +312,7 @@ describe( 'deserializeOAuthSession', () => {
 	describe( 'finished session', () => {
 
 		it( 'adds authorization and assert=user by default', () => {
-			const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+			const session = new BaseTestSession( {}, clientOptions );
 			deserializeOAuthSession( session, {
 				accessToken: 'ACCESSTOKEN',
 			} );
@@ -322,7 +323,7 @@ describe( 'deserializeOAuthSession', () => {
 		} );
 
 		it( 'preserves refresh token', () => {
-			const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+			const session = new BaseTestSession( {}, clientOptions );
 			deserializeOAuthSession( session, {
 				refreshToken: 'REFRESHTOKEN',
 			} );
@@ -339,7 +340,7 @@ describe( 'deserializeOAuthSession', () => {
 			it( `does not add assert to defaultParams with false in ${name}`, () => {
 				const session = new SuccessfulTestSession( {}, {
 					...defaultOptions,
-					'm3api-oauth2/client': client,
+					...clientOptions,
 				} );
 				deserializeOAuthSession( session, {
 					accessToken: 'ACCESSTOKEN',

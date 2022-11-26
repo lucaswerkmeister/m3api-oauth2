@@ -11,6 +11,7 @@ import {
 	serializeOAuthSession,
 	deserializeOAuthSession,
 } from '../../index.js';
+import * as nodeCrypto from 'crypto';
 import { format } from 'util';
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
@@ -80,10 +81,13 @@ describe( 'initOAuthSession', () => {
 				.to.equal( 'code' );
 			expect( url.searchParams.get( 'client_id' ), '?client_id' )
 				.to.equal( 'CLIENTID' );
+			const codeChallengePattern = 'webcrypto' in nodeCrypto ?
+				/^[A-Za-z0-9-_]+$/ :
+				/^[A-Za-z0-9_~]+$/;
 			expect( url.searchParams.get( 'code_challenge' ), '?code_challenge' )
-				.to.match( /^[A-Za-z0-9-_]+$/ );
+				.to.match( codeChallengePattern );
 			expect( url.searchParams.get( 'code_challenge_method' ), '?code_challenge_method' )
-				.to.equal( 'S256' );
+				.to.equal( 'webcrypto' in nodeCrypto ? 'S256' : 'plain' );
 			expect( url.hash, 'hash' ).to.equal( '' );
 		} );
 	}

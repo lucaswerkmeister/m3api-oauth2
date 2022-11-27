@@ -75,6 +75,33 @@ await refreshOAuthSession( session );
 
 A future version will hopefully arrange for this to be done automatically.
 
+### Non-confidential clients
+
+MediaWiki also supports non-confidential clients,
+i.e. clients that are unable to keep a client secret,
+such as in-browser apps or mobile apps.
+Whether a client is confidential or not is specified when the client is registered.
+
+MediaWiki still generates a client secret for non-confidential clients,
+and as far as this library is concerned,
+you can use the client with or without its client secret:
+
+```js
+const client = new OAuthClient( clientId, clientSecret );
+// or:
+const client = new OAuthClient( clientId );
+
+// both support:
+const session = new Session( 'en.wikipedia.org', {}, {
+	'm3api-oauth2/client': client,
+} );
+```
+
+Whether a non-confidential client should be used with or without its secret
+is currently up for discussion in [T323867][];
+note that without a client secret,
+the session currently cannot be refreshed ([T323855][]).
+
 ## Terminology
 
 There are several different kinds of “session” relevant to this package;
@@ -112,11 +139,33 @@ as well as any other data you like.
 
 ## Limitations
 
-Non-confidential clients (using PKCE) are not yet supported.
-A client secret is required.
-
 Sessions aren’t refreshed automatically yet,
 you need to call `refreshOAuthSession( session )` manually.
+
+## Compatibility
+
+m3api-oauth2 is *not* compatible with all platforms supported by m3api;
+specifically, it additionaly requires support for dynamic imports
+(which most browsers supported a handful of releases later than the static imports required by m3api),
+and optionally the Web Crypto API methods `crypto.getRandomValues()` and `crypto.subtle.digest()`
+(available in all m3api-supported browsers, but in Node only since version 16).
+
+To support Node 12 and 14, m3api-oauth2 does not require the Web Crypto API by default,
+but will instead fall back to generating a PKCE code verifier using `Math.random()`,
+and to use it as the code challenge without hashing it
+(which OAuth allows for clients that can’t perform a SHA2-256 hash).
+If you don’t need to support older Node versions,
+you can set the `m3api-oauth2/requireCrypto` request option to `true`
+(e.g. in the session default options, set at construction time),
+so that m3api-oauth2 will throw an error instead of falling back if the Web Crypto API is unexpectedly unavailable.
+
+```js
+const session = new Session( 'en.wikipedia.org', {}, {
+	userAgent: 'm3api-oauth2-README-example',
+	'm3api-oauth2/client': ...,
+	'm3api-oauth2/requireCrypto': true,
+} );
+```
 
 ## License
 
@@ -126,5 +175,7 @@ you agree to publish your contribution under the same license.
 
 [m3api]: https://www.npmjs.com/package/m3api
 [OAuth]: https://www.mediawiki.org/wiki/Special:MyLanguage/Help:OAuth
+[T323867]: https://phabricator.wikimedia.org/T323867
+[T323855]: https://phabricator.wikimedia.org/T323855
 [express-session]: https://expressjs.com/en/resources/middleware/session.html
 [ISC License]: https://spdx.org/licenses/ISC.html

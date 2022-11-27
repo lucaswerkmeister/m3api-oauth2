@@ -17,7 +17,9 @@ const userAgent = 'm3api-oauth2-integration-tests (https://github.com/lucaswerkm
 
 describe( 'm3api-oauth2', () => {
 
-	let mediawikiUsername, mediawikiPassword, oauthClientId, oauthClientSecret;
+	let mediawikiUsername, mediawikiPassword,
+		oauthClientId, oauthClientSecret,
+		oauthNonconfidentialClientId, oauthNonconfidentialClientSecret;
 
 	before( 'load credentials', async () => {
 		// note: this code is based on similar code in m3api
@@ -25,8 +27,14 @@ describe( 'm3api-oauth2', () => {
 		mediawikiPassword = process.env.MEDIAWIKI_PASSWORD;
 		oauthClientId = process.env.OAUTH_CLIENT_ID;
 		oauthClientSecret = process.env.OAUTH_CLIENT_SECRET;
+		oauthNonconfidentialClientId = process.env.OAUTH_NONCONFIDENTIAL_CLIENT_ID;
+		oauthNonconfidentialClientSecret = process.env.OAUTH_NONCONFIDENTIAL_CLIENT_SECRET;
 
-		if ( !mediawikiUsername || !mediawikiPassword || !oauthClientId || !oauthClientSecret ) {
+		if (
+			!mediawikiUsername || !mediawikiPassword ||
+			!oauthClientId || !oauthClientSecret ||
+			!oauthNonconfidentialClientId || !oauthNonconfidentialClientSecret
+		) {
 			let envFile;
 			try {
 				envFile = await fs.promises.readFile( '.env', { encoding: 'utf8' } );
@@ -70,6 +78,16 @@ describe( 'm3api-oauth2', () => {
 							oauthClientSecret = match[ 2 ];
 						}
 						break;
+					case 'OAUTH_NONCONFIDENTIAL_CLIENT_ID':
+						if ( !oauthNonconfidentialClientId ) {
+							oauthNonconfidentialClientId = match[ 2 ];
+						}
+						break;
+					case 'OAUTH_NONCONFIDENTIAL_CLIENT_SECRET':
+						if ( !oauthNonconfidentialClientSecret ) {
+							oauthNonconfidentialClientSecret = match[ 2 ];
+						}
+						break;
 					default:
 						console.warn( `.env: ignoring unknown assignment: ${line}` );
 						break;
@@ -79,7 +97,11 @@ describe( 'm3api-oauth2', () => {
 	} );
 
 	before( 'log in', async () => {
-		if ( !mediawikiUsername || !mediawikiPassword || !oauthClientId || !oauthClientSecret ) {
+		if (
+			!mediawikiUsername || !mediawikiPassword ||
+			!oauthClientId || !oauthClientSecret ||
+			!oauthNonconfidentialClientId || !oauthNonconfidentialClientSecret
+		) {
 			throw new Error( 'Incomplete environment!' );
 		}
 
@@ -93,48 +115,69 @@ describe( 'm3api-oauth2', () => {
 		} );
 	} );
 
-	it( 'node.js', async () => {
-		const makeSession = () => new Session( 'test.wikipedia.beta.wmflabs.org', {
-			formatversion: 2,
-		}, {
-			userAgent,
-			'm3api-oauth2/client': new OAuthClient( oauthClientId, oauthClientSecret ),
-		} );
+	for ( const [ description, clientFactory, supportsRefresh ] of [
+		[
+			'confidential client with secret',
+			() => new OAuthClient( oauthClientId, oauthClientSecret ),
+			true,
+		],
+		[
+			'non-confidential client with secret',
+			() => new OAuthClient( oauthNonconfidentialClientId, oauthNonconfidentialClientSecret ),
+			true,
+		],
+		[
+			'non-confidential client without secret',
+			() => new OAuthClient( oauthNonconfidentialClientId ),
+			false, // T323855
+		],
+	] ) {
+		// eslint-disable-next-line no-loop-func
+		it( `node.js, ${description}`, async () => {
+			const makeSession = () => new Session( 'test.wikipedia.beta.wmflabs.org', {
+				formatversion: 2,
+			}, {
+				userAgent,
+				'm3api-oauth2/client': clientFactory(),
+			} );
 
-		let session = makeSession();
-		const authorizeUrl = await initOAuthSession( session );
-		let serialization = serializeOAuthSession( session );
-		await browser.url( authorizeUrl );
-		await $( '#mw-mwoauth-accept button' ).waitForExist();
-		await $( '#mw-mwoauth-accept button' ).click();
-		await browser.waitUntil( async () => {
-			return ( await browser.getUrl() ) !== authorizeUrl;
-		} );
+			let session = makeSession();
+			const authorizeUrl = await initOAuthSession( session );
+			let serialization = serializeOAuthSession( session );
+			await browser.url( authorizeUrl );
+			await $( '#mw-mwoauth-accept button' ).waitForExist();
+			await $( '#mw-mwoauth-accept button' ).click();
+			await browser.waitUntil( async () => {
+				return ( await browser.getUrl() ) !== authorizeUrl;
+			} );
 
-		const callbackUrl = await browser.getUrl();
-		session = makeSession();
-		deserializeOAuthSession( session, serialization );
-		await completeOAuthSession( session, callbackUrl );
-		serialization = serializeOAuthSession( session );
+			const callbackUrl = await browser.getUrl();
+			session = makeSession();
+			deserializeOAuthSession( session, serialization );
+			await completeOAuthSession( session, callbackUrl );
+			serialization = serializeOAuthSession( session );
 
-		session = makeSession();
-		deserializeOAuthSession( session, serialization );
-		let response = await session.request( {
-			action: 'query',
-			meta: set( 'userinfo' ),
-		} );
-		expect( response.query.userinfo ).not.toHaveProperty( 'anon' );
-		expect( response.query.userinfo ).toHaveProperty( 'name', mediawikiUsername );
+			session = makeSession();
+			deserializeOAuthSession( session, serialization );
+			let response = await session.request( {
+				action: 'query',
+				meta: set( 'userinfo' ),
+			} );
+			expect( response.query.userinfo ).not.toHaveProperty( 'anon' );
+			expect( response.query.userinfo ).toHaveProperty( 'name', mediawikiUsername );
 
-		session = makeSession();
-		deserializeOAuthSession( session, serialization );
-		await refreshOAuthSession( session );
-		response = await session.request( {
-			action: 'query',
-			meta: set( 'userinfo' ),
+			if ( supportsRefresh ) {
+				session = makeSession();
+				deserializeOAuthSession( session, serialization );
+				await refreshOAuthSession( session );
+				response = await session.request( {
+					action: 'query',
+					meta: set( 'userinfo' ),
+				} );
+				expect( response.query.userinfo ).not.toHaveProperty( 'anon' );
+				expect( response.query.userinfo ).toHaveProperty( 'name', mediawikiUsername );
+			}
 		} );
-		expect( response.query.userinfo ).not.toHaveProperty( 'anon' );
-		expect( response.query.userinfo ).toHaveProperty( 'name', mediawikiUsername );
-	} );
+	}
 
 } );

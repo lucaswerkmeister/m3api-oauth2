@@ -11,6 +11,7 @@ import {
 	serializeOAuthSession,
 	deserializeOAuthSession,
 } from '../../index.js';
+import * as nodeCrypto from 'crypto';
 import { format } from 'util';
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
@@ -43,6 +44,8 @@ class SuccessfulTestSession extends BaseTestSession {
 
 const client = new OAuthClient( 'CLIENTID', 'CLIENTSECRET' );
 const clientOptions = { 'm3api-oauth2/client': client };
+const nonconfidentialClient = new OAuthClient( 'NONCONFIDENTIAL-CLIENTID' );
+const nonconfidentialClientOptions = { 'm3api-oauth2/client': nonconfidentialClient };
 
 describe( 'OAuthClient', () => {
 
@@ -63,12 +66,53 @@ describe( 'initOAuthSession', () => {
 		[ 'defaultOptions', clientOptions, {} ],
 		[ 'defaultOptions', {}, clientOptions ],
 	] ) {
-		it( `gets client from ${name}`, async () => {
+		it( `gets client from ${name} and generates code challenge`, async () => {
 			const session = new BaseTestSession( {}, defaultOptions );
-			expect( await initOAuthSession( session, options ) )
-				.to.equal( 'https://en.wikipedia.org/w/rest.php/oauth2/authorize?response_type=code&client_id=CLIENTID' );
+
+			const url = new URL( await initOAuthSession( session, options ) );
+
+			expect( url.origin, 'origin' ).to.equal( 'https://en.wikipedia.org' );
+			expect( url.pathname, 'pathname' ).to.equal( '/w/rest.php/oauth2/authorize' );
+			expect( new Set( url.searchParams.keys() ), 'search params' ).to.eql( new Set( [
+				'response_type',
+				'client_id',
+				'code_challenge',
+				'code_challenge_method',
+			] ) );
+			expect( url.searchParams.get( 'response_type' ), '?response_type' )
+				.to.equal( 'code' );
+			expect( url.searchParams.get( 'client_id' ), '?client_id' )
+				.to.equal( 'CLIENTID' );
+			const codeChallengePattern = 'webcrypto' in nodeCrypto ?
+				/^[A-Za-z0-9-_]+$/ :
+				/^[A-Za-z0-9_~]+$/;
+			expect( url.searchParams.get( 'code_challenge' ), '?code_challenge' )
+				.to.match( codeChallengePattern );
+			expect( url.searchParams.get( 'code_challenge_method' ), '?code_challenge_method' )
+				.to.equal( 'webcrypto' in nodeCrypto ? 'S256' : 'plain' );
+			expect( url.hash, 'hash' ).to.equal( '' );
 		} );
 	}
+
+	it( 'supports non-confidential client', async () => {
+		const session = new BaseTestSession( {}, nonconfidentialClientOptions );
+
+		const url = new URL( await initOAuthSession( session ) );
+
+		expect( url.searchParams.get( 'client_id' ), '?client_id' )
+			.to.equal( 'NONCONFIDENTIAL-CLIENTID' );
+	} );
+
+	it( 'saves code challenge in session', async () => {
+		const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+
+		await initOAuthSession( session );
+		const serialization = serializeOAuthSession( session );
+
+		expect( serialization ).to.have.property( 'codeVerifier' )
+			.to.match( /^[A-Za-z0-9-._~]{43,128}$/, 'general OAuth 2.0 code verifier' )
+			.and.to.match( /^[A-Za-z0-9_~]{43}$/, 'our code verifier' );
+	} );
 
 	it( 'throws if client option not specified', async () => {
 		await expect( initOAuthSession( new BaseTestSession(), {} ) )
@@ -94,6 +138,7 @@ describe( 'completeOAuthSession', () => {
 						code: 'CODE',
 						client_id: 'CLIENTID',
 						client_secret: 'CLIENTSECRET',
+						code_verifier: 'CODEVERIFIER',
 					} );
 					expect( called, 'not called yet' ).to.be.false;
 					called = true;
@@ -111,12 +156,49 @@ describe( 'completeOAuthSession', () => {
 			}
 
 			const session = new TestSession( {}, defaultOptions );
+			deserializeOAuthSession( session, { codeVerifier: 'CODEVERIFIER' } );
+
 			await completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE', options );
 			expect( session.defaultOptions )
 				.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
 			expect( called ).to.be.true;
 		} );
 	}
+
+	it( 'supports non-confidential client', async () => {
+		let called = false;
+		class TestSession extends BaseTestSession {
+			async internalPost( apiUrl, urlParams, bodyParams ) {
+				expect( bodyParams ).to.eql( {
+					grant_type: 'authorization_code',
+					code: 'CODE',
+					client_id: 'NONCONFIDENTIAL-CLIENTID',
+					// no client_secret
+					code_verifier: 'CODEVERIFIER',
+				} );
+				expect( called, 'not called yet' ).to.be.false;
+				called = true;
+				return {
+					status: 200,
+					headers: {},
+					body: {
+						token_type: 'Bearer',
+						expires_in: 14400,
+						access_token: 'ACCESSTOKEN',
+						refresh_token: 'REFRESHTOKEN',
+					},
+				};
+			}
+		}
+
+		const session = new TestSession( {}, nonconfidentialClientOptions );
+		deserializeOAuthSession( session, { codeVerifier: 'CODEVERIFIER' } );
+
+		await completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE' );
+		expect( session.defaultOptions )
+			.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
+		expect( called ).to.be.true;
+	} );
 
 	it( 'passes user agent into internalPost()', async () => {
 		let called = false;
@@ -271,6 +353,44 @@ describe( 'refreshOAuthSession', () => {
 		expect( called ).to.be.true;
 	} );
 
+	it( 'supports non-confidential client', async () => {
+		let called = false;
+		class TestSession extends BaseTestSession {
+			async internalPost( apiUrl, urlParams, bodyParams ) {
+				expect( bodyParams ).to.eql( {
+					grant_type: 'refresh_token',
+					refresh_token: 'REFRESHTOKEN1',
+					client_id: 'NONCONFIDENTIAL-CLIENTID',
+					// no client_secret
+				} );
+				expect( called, 'not called yet' ).to.be.false;
+				called = true;
+				return {
+					status: 200,
+					headers: {},
+					body: {
+						token_type: 'Bearer',
+						expires_in: 14400,
+						access_token: 'ACCESSTOKEN2',
+						refresh_token: 'REFRESHTOKEN2',
+					},
+				};
+			}
+		}
+
+		const session = new TestSession( {}, nonconfidentialClientOptions );
+		deserializeOAuthSession( session, {
+			accessToken: 'ACCESSTOKEN1',
+			refreshToken: 'REFRESHTOKEN1',
+		} );
+		await refreshOAuthSession( session );
+		expect( serializeOAuthSession( session ) ).to.eql( {
+			accessToken: 'ACCESSTOKEN2',
+			refreshToken: 'REFRESHTOKEN2',
+		} );
+		expect( called ).to.be.true;
+	} );
+
 } );
 
 describe( 'serializeOAuthSession', () => {
@@ -284,8 +404,10 @@ describe( 'serializeOAuthSession', () => {
 	it( 'initialized session', async () => {
 		const session = new BaseTestSession( {}, clientOptions );
 		await initOAuthSession( session );
-		expect( serializeOAuthSession( session ) )
-			.to.eql( {} );
+		const { codeVerifier, ...restSerialization } = serializeOAuthSession( session );
+		expect( codeVerifier )
+			.and.to.match( /^[A-Za-z0-9_~]{43}$/ );
+		expect( restSerialization ).to.eql( {} );
 	} );
 
 	it( 'finished session', async () => {
@@ -303,9 +425,22 @@ describe( 'serializeOAuthSession', () => {
 
 describe( 'deserializeOAuthSession', () => {
 
-	it( 'blank/initialized session', () => { // no difference yet
+	it( 'blank session', () => {
 		const session = new BaseTestSession( {}, clientOptions );
 		deserializeOAuthSession( session, {} );
+		expect( session.defaultOptions ).not.to.have.property( 'authorization' );
+	} );
+
+	it( 'initialized session', () => {
+		const session = new BaseTestSession( {}, clientOptions );
+		deserializeOAuthSession( session, {
+			codeVerifier: 'CODEVERIFIER',
+		} );
+		// we can’t see the refresh token in the session
+		// (and already test elsewhere that completeOAuthSession() uses it),
+		// so just serialize it again to check that it’s there
+		expect( serializeOAuthSession( session ) )
+			.to.have.property( 'codeVerifier', 'CODEVERIFIER' );
 		expect( session.defaultOptions ).not.to.have.property( 'authorization' );
 	} );
 

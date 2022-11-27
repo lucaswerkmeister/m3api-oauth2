@@ -44,6 +44,8 @@ class SuccessfulTestSession extends BaseTestSession {
 
 const client = new OAuthClient( 'CLIENTID', 'CLIENTSECRET' );
 const clientOptions = { 'm3api-oauth2/client': client };
+const nonconfidentialClient = new OAuthClient( 'NONCONFIDENTIAL-CLIENTID' );
+const nonconfidentialClientOptions = { 'm3api-oauth2/client': nonconfidentialClient };
 
 describe( 'OAuthClient', () => {
 
@@ -91,6 +93,15 @@ describe( 'initOAuthSession', () => {
 			expect( url.hash, 'hash' ).to.equal( '' );
 		} );
 	}
+
+	it( 'supports non-confidential client', async () => {
+		const session = new BaseTestSession( {}, nonconfidentialClientOptions );
+
+		const url = new URL( await initOAuthSession( session ) );
+
+		expect( url.searchParams.get( 'client_id' ), '?client_id' )
+			.to.equal( 'NONCONFIDENTIAL-CLIENTID' );
+	} );
 
 	it( 'saves code challenge in session', async () => {
 		const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
@@ -153,6 +164,41 @@ describe( 'completeOAuthSession', () => {
 			expect( called ).to.be.true;
 		} );
 	}
+
+	it( 'supports non-confidential client', async () => {
+		let called = false;
+		class TestSession extends BaseTestSession {
+			async internalPost( apiUrl, urlParams, bodyParams ) {
+				expect( bodyParams ).to.eql( {
+					grant_type: 'authorization_code',
+					code: 'CODE',
+					client_id: 'NONCONFIDENTIAL-CLIENTID',
+					// no client_secret
+					code_verifier: 'CODEVERIFIER',
+				} );
+				expect( called, 'not called yet' ).to.be.false;
+				called = true;
+				return {
+					status: 200,
+					headers: {},
+					body: {
+						token_type: 'Bearer',
+						expires_in: 14400,
+						access_token: 'ACCESSTOKEN',
+						refresh_token: 'REFRESHTOKEN',
+					},
+				};
+			}
+		}
+
+		const session = new TestSession( {}, nonconfidentialClientOptions );
+		deserializeOAuthSession( session, { codeVerifier: 'CODEVERIFIER' } );
+
+		await completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE' );
+		expect( session.defaultOptions )
+			.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
+		expect( called ).to.be.true;
+	} );
 
 	it( 'passes user agent into internalPost()', async () => {
 		let called = false;
@@ -303,6 +349,44 @@ describe( 'refreshOAuthSession', () => {
 		expect( serializeOAuthSession( session ) ).to.eql( {
 			accessToken: 'ACCESSTOKEN2',
 			refreshToken: 'REFRESHTOKEN1',
+		} );
+		expect( called ).to.be.true;
+	} );
+
+	it( 'supports non-confidential client', async () => {
+		let called = false;
+		class TestSession extends BaseTestSession {
+			async internalPost( apiUrl, urlParams, bodyParams ) {
+				expect( bodyParams ).to.eql( {
+					grant_type: 'refresh_token',
+					refresh_token: 'REFRESHTOKEN1',
+					client_id: 'NONCONFIDENTIAL-CLIENTID',
+					// no client_secret
+				} );
+				expect( called, 'not called yet' ).to.be.false;
+				called = true;
+				return {
+					status: 200,
+					headers: {},
+					body: {
+						token_type: 'Bearer',
+						expires_in: 14400,
+						access_token: 'ACCESSTOKEN2',
+						refresh_token: 'REFRESHTOKEN2',
+					},
+				};
+			}
+		}
+
+		const session = new TestSession( {}, nonconfidentialClientOptions );
+		deserializeOAuthSession( session, {
+			accessToken: 'ACCESSTOKEN1',
+			refreshToken: 'REFRESHTOKEN1',
+		} );
+		await refreshOAuthSession( session );
+		expect( serializeOAuthSession( session ) ).to.eql( {
+			accessToken: 'ACCESSTOKEN2',
+			refreshToken: 'REFRESHTOKEN2',
 		} );
 		expect( called ).to.be.true;
 	} );

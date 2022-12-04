@@ -4,7 +4,6 @@ on:
     types: [published]
 jobs:
   release:
-    runs-on: ubuntu-latest
     uses: lucaswerkmeister/m3api/.github/workflows/release.yaml@main
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

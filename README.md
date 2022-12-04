@@ -5,8 +5,9 @@ making it easy to make requests authenticated via [OAuth 2.0][OAuth].
 
 ## Usage
 
-Create an OAuth client containing your credentials (e.g. loaded from the process environment),
-and attach it to an m3api session in the request options:
+Propose an OAuth 2.0 client on [Special:OAuthConsumerRegistration/propose/oauth2][],
+load its credentials (e.g. from the process envirnoment) into an `OAuthClient` instance,
+and attach that to an m3api session in the request options:
 
 ```js
 import Session from 'm3api/node.js';
@@ -174,6 +175,7 @@ By contributing to this software,
 you agree to publish your contribution under the same license.
 
 [m3api]: https://www.npmjs.com/package/m3api
+[Special:OAuthConsumerRegistration/propose/oauth2]: https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2
 [OAuth]: https://www.mediawiki.org/wiki/Special:MyLanguage/Help:OAuth
 [T323867]: https://phabricator.wikimedia.org/T323867
 [T323855]: https://phabricator.wikimedia.org/T323855

@@ -5,7 +5,7 @@ This file records the changes in each m3api-oauth2 release.
 The annotated tag (and GitHub release) for each version also lists the changes,
 but this file may sometimes contain later improvements (e.g. typo fixes).
 
-## initial (not yet released)
+## v0.1.0 (2022-12-04)
 
 Initial release, including:
 

@@ -7,4 +7,13 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 
 ## initial (not yet released)
 
-No changes yet.
+Initial release, including:
+
+- The `OAuthClient` class and
+  `initOAuthSession()` and `completeOAuthSession()` functions,
+  to perform the OAuth 2.0 authorization code flow.
+- The `refreshOAuthSession()` function,
+  to perform the refresh flow (albeit not yet automatically).
+- The `serializeOAuthSession()` and `deserializeOAuthSession()` functions,
+  to serialize the OAuth state of a session between requests.
+- PKCE support, for non-confidential clients without a client secret.

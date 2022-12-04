@@ -1,4 +1,6 @@
 # m3api-oauth2
+[![npm](https://img.shields.io/npm/v/m3api-oauth2.svg)](https://www.npmjs.com/package/m3api-oauth2)
+[![documentation](https://img.shields.io/badge/documentation-informational)](https://lucaswerkmeister.github.io/m3api-oauth2/)
 
 m3api-oauth2 is an extension package for [m3api][],
 making it easy to make requests authenticated via [OAuth 2.0][OAuth].

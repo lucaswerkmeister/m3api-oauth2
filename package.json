@@ -8,7 +8,8 @@
 		"test": "npm-run-all test:*",
 		"test:lint": "eslint .",
 		"test:unit": "mocha test/unit/",
-		"test:integration": "wdio run .wdio.cjs"
+		"test:integration": "wdio run .wdio.cjs",
+		"doc": "jsdoc -c jsdoc/conf.json"
 	},
 	"homepage": "https://github.com/lucaswerkmeister/m3api-oauth2#readme",
 	"bugs": "https://github.com/lucaswerkmeister/m3api-oauth2/issues",
@@ -39,6 +40,7 @@
 		"eslint-config-wikimedia": "^0.23.0",
 		"eslint-plugin-chai-friendly": "^0.7.2",
 		"eslint-plugin-wdio": "^7.25.3",
+		"jsdoc": "^4.0.0",
 		"m3api": "github:lucaswerkmeister/m3api#main",
 		"mocha": "^9.2.1",
 		"npm-run-all": "^4.1.5",

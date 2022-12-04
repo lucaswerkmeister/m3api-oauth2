@@ -1,4 +1,5 @@
 # copied from .gitignore (which this overrides)
+/doc/
 /.env
 
 # additional exclusions irrelevant for published packages

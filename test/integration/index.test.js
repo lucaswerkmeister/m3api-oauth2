@@ -19,7 +19,8 @@ describe( 'm3api-oauth2', () => {
 
 	let mediawikiUsername, mediawikiPassword,
 		oauthClientId, oauthClientSecret,
-		oauthNonconfidentialClientId, oauthNonconfidentialClientSecret;
+		oauthNonconfidentialClientId, oauthNonconfidentialClientSecret,
+		runSlowTests;
 
 	before( 'load credentials', async () => {
 		// note: this code is based on similar code in m3api
@@ -29,6 +30,7 @@ describe( 'm3api-oauth2', () => {
 		oauthClientSecret = process.env.OAUTH_CLIENT_SECRET;
 		oauthNonconfidentialClientId = process.env.OAUTH_NONCONFIDENTIAL_CLIENT_ID;
 		oauthNonconfidentialClientSecret = process.env.OAUTH_NONCONFIDENTIAL_CLIENT_SECRET;
+		runSlowTests = process.env.RUN_SLOW_TESTS;
 
 		if (
 			!mediawikiUsername || !mediawikiPassword ||
@@ -86,6 +88,11 @@ describe( 'm3api-oauth2', () => {
 					case 'OAUTH_NONCONFIDENTIAL_CLIENT_SECRET':
 						if ( !oauthNonconfidentialClientSecret ) {
 							oauthNonconfidentialClientSecret = match[ 2 ];
+						}
+						break;
+					case 'RUN_SLOW_TESTS':
+						if ( runSlowTests === undefined ) {
+							runSlowTests = match[ 2 ];
 						}
 						break;
 					default:
@@ -179,5 +186,60 @@ describe( 'm3api-oauth2', () => {
 			}
 		} );
 	}
+
+	it( 'SLOW: node.js, automatic refresh', async function () {
+		if ( runSlowTests === undefined || [ 'no', 'n', 'false', '0' ].includes( runSlowTests.toLowerCase() ) ) {
+			this.skip();
+			return;
+		}
+		this.timeout( ( 4 * 60 + 10 ) * 60 * 1000 );
+
+		const makeSession = () => new Session( 'test.wikipedia.beta.wmflabs.org', {
+			formatversion: 2,
+		}, {
+			userAgent,
+			'm3api-oauth2/client': new OAuthClient( oauthClientId, oauthClientSecret ),
+		} );
+
+		let session = makeSession();
+		const authorizeUrl = await initOAuthSession( session );
+		let serialization = serializeOAuthSession( session );
+		await browser.url( authorizeUrl );
+		await $( '#mw-mwoauth-accept button' ).waitForExist();
+		await $( '#mw-mwoauth-accept button' ).click();
+		await browser.waitUntil( async () => {
+			return ( await browser.getUrl() ) !== authorizeUrl;
+		} );
+
+		const callbackUrl = await browser.getUrl();
+		session = makeSession();
+		deserializeOAuthSession( session, serialization );
+		await completeOAuthSession( session, callbackUrl );
+		serialization = serializeOAuthSession( session );
+
+		session = makeSession();
+		deserializeOAuthSession( session, serialization );
+		let response = await session.request( {
+			action: 'query',
+			meta: set( 'userinfo' ),
+		} );
+		expect( response.query.userinfo ).not.toHaveProperty( 'anon' );
+		expect( response.query.userinfo ).toHaveProperty( 'name', mediawikiUsername );
+
+		const now = new Date().toLocaleTimeString();
+		console.log( `${now} sleeping for 4h5m to let the access token expire...` );
+		await new Promise( ( resolve ) => {
+			setTimeout( resolve, ( 4 * 60 + 5 ) * 60 * 1000 );
+		} );
+
+		session = makeSession();
+		deserializeOAuthSession( session, serialization );
+		response = await session.request( {
+			action: 'query',
+			meta: set( 'userinfo' ),
+		} );
+		expect( response.query.userinfo ).not.toHaveProperty( 'anon' );
+		expect( response.query.userinfo ).toHaveProperty( 'name', mediawikiUsername );
+	} );
 
 } );

@@ -7,6 +7,9 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 
 ## next (not yet released)
 
+- The access token is now refreshed automatically;
+  it is no longer necessary to call `refreshOAuthSession()` by hand,
+  and sessions should remain usable indefinitely.
 - Updated dependencies.
 
 ## v0.1.1 (2022-12-04)

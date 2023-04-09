@@ -24,6 +24,23 @@ jobs:
           OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
           OAUTH_NONCONFIDENTIAL_CLIENT_ID: ${{ secrets.OAUTH_NONCONFIDENTIAL_CLIENT_ID }}
           OAUTH_NONCONFIDENTIAL_CLIENT_SECRET: ${{ secrets.OAUTH_NONCONFIDENTIAL_CLIENT_SECRET }}
+  test-slow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm ci
+      - run: npm run test:integration
+        env:
+          MEDIAWIKI_USERNAME: ${{ secrets.MEDIAWIKI_USERNAME }}
+          MEDIAWIKI_PASSWORD: ${{ secrets.MEDIAWIKI_PASSWORD }}
+          OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
+          OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
+          OAUTH_NONCONFIDENTIAL_CLIENT_ID: ${{ secrets.OAUTH_NONCONFIDENTIAL_CLIENT_ID }}
+          OAUTH_NONCONFIDENTIAL_CLIENT_SECRET: ${{ secrets.OAUTH_NONCONFIDENTIAL_CLIENT_SECRET }}
+          RUN_SLOW_TESTS: 1
   test-package-lock:
     runs-on: ubuntu-latest
     steps:

@@ -3,6 +3,7 @@
 // OAuth 2.0 POST parameters use underscores
 
 import { Session } from 'm3api/core.js';
+import 'm3api/add-performance-global.js';
 import {
 	OAuthClient,
 	initOAuthSession,
@@ -15,6 +16,7 @@ import * as nodeCrypto from 'crypto';
 import { format } from 'util';
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import FakeTimers from '@sinonjs/fake-timers';
 chai.use( chaiAsPromised );
 
 class BaseTestSession extends Session {
@@ -482,6 +484,153 @@ describe( 'deserializeOAuthSession', () => {
 				}, options );
 				expect( session.defaultParams ).not.to.have.property( 'assert' );
 			} );
+		} );
+
+	} );
+
+	describe( 'automatic refresh', () => {
+
+		it( 'automatically refreshes and retries request', async () => {
+			let internalPostCalled = false;
+			let internalGetCall = 0;
+			class TestSession extends BaseTestSession {
+				async internalPost( apiUrl, urlParams, bodyParams ) {
+					expect( bodyParams ).property( 'grant_type' ).to.equal( 'refresh_token' );
+					expect( internalPostCalled, 'not called yet' ).to.be.false;
+					internalPostCalled = true;
+					return {
+						status: 200,
+						headers: {},
+						body: {
+							token_type: 'Bearer',
+							expires_in: 14400,
+							access_token: 'ACCESSTOKEN2',
+						},
+					};
+				}
+
+				async internalGet( apiUrl, params ) {
+					expect( params ).to.eql( {
+						action: 'query',
+						assert: 'user',
+						format: 'json',
+					} );
+					let body;
+					switch ( ++internalGetCall ) {
+						case 1:
+							body = { errors: [ { code: 'mwoauth-invalid-authorization' } ] };
+							break;
+						case 2:
+							body = { response: true };
+							break;
+						default:
+							throw new Error( `Unexpected call #${internalGetCall}` );
+					}
+					return {
+						status: 200,
+						headers: {},
+						body,
+					};
+				}
+			}
+
+			const session = new TestSession( {}, clientOptions );
+			deserializeOAuthSession( session, {
+				accessToken: 'ACCESSTOKEN1',
+				refreshToken: 'REFRESHTOKEN',
+			} );
+			expect( await session.request( { action: 'query' } ) )
+				.to.eql( { response: true } );
+			expect( internalPostCalled ).to.be.true;
+			expect( internalGetCall ).to.equal( 2 );
+		} );
+
+		it( 'does not retry if not enough time is left', async () => {
+			const clock = FakeTimers.install();
+			let internalPostCalled = false;
+			let internalGetCalled = false;
+			class TestSession extends BaseTestSession {
+				async internalPost( apiUrl, urlParams, bodyParams ) {
+					expect( bodyParams ).property( 'grant_type' ).to.equal( 'refresh_token' );
+					expect( internalPostCalled, 'not called yet' ).to.be.false;
+					internalPostCalled = true;
+					return {
+						status: 200,
+						headers: {},
+						body: {
+							token_type: 'Bearer',
+							expires_in: 14400,
+							access_token: 'ACCESSTOKEN2',
+						},
+					};
+				}
+
+				async internalGet( apiUrl, params ) {
+					expect( params ).property( 'action' ).to.equal( 'query' );
+					expect( internalGetCalled, 'not called yet' ).to.be.false;
+					internalGetCalled = true;
+					await clock.tickAsync( 1000 );
+					return {
+						status: 200,
+						headers: {},
+						body: { errors: [ { code: 'mwoauth-invalid-authorization' } ] },
+					};
+				}
+			}
+
+			const session = new TestSession( {}, clientOptions );
+			deserializeOAuthSession( session, {
+				accessToken: 'ACCESSTOKEN1',
+				refreshToken: 'REFRESHTOKEN',
+			} );
+			await expect( session.request( { action: 'query' }, { retryUntil: clock.now + 500 } ) )
+				.to.be.rejectedWith( /mwoauth-invalid-authorization/ );
+			expect( internalPostCalled ).to.be.true;
+			expect( internalGetCalled ).to.be.true;
+			expect( serializeOAuthSession( session ) )
+				.property( 'accessToken' )
+				.to.equal( 'ACCESSTOKEN2' );
+		} );
+
+		it( 'does not refresh more than once', async () => {
+			let internalPostCalled = false;
+			let internalGetCall = 0;
+			class TestSession extends BaseTestSession {
+				async internalPost( apiUrl, urlParams, bodyParams ) {
+					expect( bodyParams ).property( 'grant_type' ).to.equal( 'refresh_token' );
+					expect( internalPostCalled, 'not called yet' ).to.be.false;
+					internalPostCalled = true;
+					return {
+						status: 200,
+						headers: {},
+						body: {
+							token_type: 'Bearer',
+							expires_in: 14400,
+							access_token: 'ACCESSTOKEN2',
+						},
+					};
+				}
+
+				async internalGet() {
+					internalGetCall++;
+					// keep returning the same error even after refresh
+					return {
+						status: 200,
+						headers: {},
+						body: { errors: [ { code: 'mwoauth-invalid-authorization' } ] },
+					};
+				}
+			}
+
+			const session = new TestSession( {}, clientOptions );
+			deserializeOAuthSession( session, {
+				accessToken: 'ACCESSTOKEN1',
+				refreshToken: 'REFRESHTOKEN',
+			} );
+			await expect( session.request( { action: 'query' } ) )
+				.to.be.rejectedWith( /mwoauth-invalid-authorization/ );
+			expect( internalPostCalled ).to.be.true;
+			expect( internalGetCall ).to.equal( 2 );
 		} );
 
 	} );

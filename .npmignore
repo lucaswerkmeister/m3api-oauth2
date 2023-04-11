@@ -8,4 +8,5 @@
 /.github/
 /.wdio.cjs
 /RELEASE.md
+/jsdoc/
 /test/

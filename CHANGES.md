@@ -5,7 +5,7 @@ This file records the changes in each m3api-oauth2 release.
 The annotated tag (and GitHub release) for each version also lists the changes,
 but this file may sometimes contain later improvements (e.g. typo fixes).
 
-## next (not yet released)
+## v0.2.0 (2023-04-11)
 
 - The access token is now refreshed automatically;
   it is no longer necessary to call `refreshOAuthSession()` by hand,

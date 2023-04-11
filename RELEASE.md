@@ -3,9 +3,6 @@
 This file documents (for maintainers) how to make a new m3api-oauth2 release.
 For the release notes (for users), see [CHANGES.md](./CHANGES.md).
 
-0. Bump the dev and peer dependency of m3api to the latest released version.
-   Then, remove this entry from `RELEASE.md` :)
-
 1. Consider running `npm audit fix`, `npm update`,
    checking `npm outdated`, etc.
    Add any resulting changes to `CHANGES.md`.

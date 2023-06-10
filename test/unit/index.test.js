@@ -3,7 +3,6 @@
 // OAuth 2.0 POST parameters use underscores
 
 import { Session } from 'm3api/core.js';
-import 'm3api/add-performance-global.js';
 import {
 	OAuthClient,
 	initOAuthSession,

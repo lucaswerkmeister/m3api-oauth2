@@ -4,17 +4,12 @@ on:
   pull_request:
 jobs:
   test:
-    strategy:
-      matrix:
-        node_version:
-          - 14 # no web crypto
-          - 16 # web crypto
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node_version }}
+          node-version: 16
       - run: npm ci
       - run: npm test
         env:

@@ -8,7 +8,7 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 ## next (not yet released)
 
 - BREAKING CHANGE:
-  m3api-oauth2 now requires at least Node.js version 16,
+  m3api-oauth2 now requires at least Node.js version 18.2.0,
   up from Node 12.22.0 or Node 14.17.0 previously.
   As part of this, the `m3api-oauth2/requireCrypto` request option has been removed,
   as we no longer support any platform where the Web Crypto API is not available:

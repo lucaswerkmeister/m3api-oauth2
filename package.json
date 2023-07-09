@@ -29,7 +29,7 @@
 		"m3api": "^0.8.0"
 	},
 	"devDependencies": {
-		"@sinonjs/fake-timers": "^10.0.2",
+		"@sinonjs/fake-timers": "^10.3.0",
 		"@wdio/cli": "^8.0.15",
 		"@wdio/local-runner": "^8.0.15",
 		"@wdio/mocha-framework": "^8.0.14",

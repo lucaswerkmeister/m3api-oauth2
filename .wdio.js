@@ -1,8 +1,6 @@
-'use strict';
+import process from 'process';
 
-const process = require( 'process' );
-
-module.exports.config = {
+export const config = {
 	specs: [ 'test/integration/*.js' ],
 	capabilities: [ {
 		browserName: 'chrome',

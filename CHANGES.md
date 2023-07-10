@@ -13,6 +13,7 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
   As part of this, the `m3api-oauth2/requireCrypto` request option has been removed,
   as we no longer support any platform where the Web Crypto API is not available:
   it is now always used unconditionally.
+- Updated dependencies.
 
 ## v0.2.0 (2023-04-11)
 

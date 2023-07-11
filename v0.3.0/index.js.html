@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>m3api: Source: index.js</title>
+    <title>m3api-oauth2: Source: index.js</title>
 
     <script defer src="scripts/prettify/prettify.js"></script>
     <script defer src="scripts/prettify/lang-css.js"></script>
@@ -15,7 +15,7 @@
 
 <div id="main">
 
-    <p class="version-warning"><strong>Warning:</strong> This is an old version. The latest stable version is <a href="../v0.3.0/index.js.html">v0.3.0</a>.</p>
+    <!-- VERSION-WARNING -->
 
     <h1 class="page-title">Source: index.js</h1>
 
@@ -34,10 +34,10 @@ import {
 } from 'm3api/core.js';
 
 /**
- * Get an instance of the Web Crypto API, if available.
+ * Get an instance of the Web Crypto API.
  *
  * @private
- * @return {Crypto|null}
+ * @return {Crypto}
  */
 async function webCrypto() {
 	if ( typeof crypto !== 'undefined' ) {
@@ -56,33 +56,7 @@ async function webCrypto() {
 		}
 	}
 
-	return null;
-}
-
-/**
- * An Error thrown if the m3api-oauth2/requireCrypto option is set,
- * but the Web Crypto API is unexpectedly not available.
- */
-class NoWebCryptoApiError extends Error {
-
-	/**
-	 * @param {...*} params Any additional params for the Error constructor,
-	 * not including the message (which is hard-coded).
-	 */
-	constructor( ...params ) {
-		super(
-			'm3api-oauth2: The Web Crypto API is unavailable, ' +
-				'but required because the m3api-oauth2/requireCrypto request option was set.',
-			...params,
-		);
-
-		if ( Error.captureStackTrace ) {
-			Error.captureStackTrace( this, NoWebCryptoApiError );
-		}
-
-		this.name = 'NoWebCryptoApiError';
-	}
-
+	throw new Error( 'Web Crypto API is required!' );
 }
 
 /**
@@ -98,15 +72,12 @@ class NoWebCryptoApiError extends Error {
  * @property {boolean} ['m3api-oauth2/assert']
  * Whether to set the 'assert' parameter in the session’s defaultParams to 'user'.
  * Defaults to true.
- * @property {boolean} ['m3api-oauth2/requireCrypto']
- * Whether to require the Web Crypto API to generate and hash the PKCE code verifier.
- * If false, and the Web Crypto API is not available,
- * m3api-oauth2 will fall back to Math.random() (non-cryptographically secure pseudo-random numbers)
- * to generate the code verifier, and will send it unhashed;
- * this allows using m3api-oauth2 on Node 12.
- * If true, m3api-oauth2 will instead throw a {@link NoWebCryptoApiError}
- * if the Web Crypto API is unavailable.
- * Defaults to false.
+ * @property {boolean} ['m3api-oauth2/autoRefresh']
+ * Whether to automatically {@link refreshOAuthSession refresh the OAuth session}
+ * when the access token expired.
+ * Defaults to true.
+ * There’s little reason for an end user to set this option to false,
+ * but it’s used internally to avoid an infinite refresh loop.
  */
 
 Object.assign( DEFAULT_OPTIONS, {
@@ -116,8 +87,45 @@ Object.assign( DEFAULT_OPTIONS, {
 		},
 	},
 	'm3api-oauth2/assert': true,
-	'm3api-oauth2/requireCrypto': false,
+	'm3api-oauth2/autoRefresh': true,
 } );
+
+/**
+ * Handle an invalid authorization error (likely due to an expired access token)
+ * by refreshing the access token and, if there’s enough time left,
+ * retrying the request.
+ *
+ * @param {Session} session
+ * @param {Object} params
+ * @param {Options} options
+ */
+async function handleInvalidAuthorizationError( session, params, options ) {
+	const {
+		retryUntil,
+		'm3api-oauth2/autoRefresh': autoRefresh,
+	} = {
+		...DEFAULT_OPTIONS,
+		...session.defaultOptions,
+		...options,
+	};
+	if ( !autoRefresh ) {
+		return null;
+	}
+	await refreshOAuthSession( session, options );
+	if ( typeof performance !== 'object' ) {
+		throw new Error( 'performance global is required!' );
+	}
+	if ( performance.now() &lt;= retryUntil ) { // eslint-disable-line no-undef
+		return session.request( params, {
+			...options,
+			'm3api-oauth2/autoRefresh': false,
+		} );
+	} else {
+		return null;
+	}
+}
+
+DEFAULT_OPTIONS.errorHandlers[ 'mwoauth-invalid-authorization' ] = handleInvalidAuthorizationError;
 
 /** @private */
 const clientSecretSymbol = Symbol( 'OAuthClient.clientSecret' );
@@ -174,13 +182,12 @@ class OAuthClient {
 async function initOAuthSession( session, options = {} ) {
 	const {
 		'm3api-oauth2/client': client,
-		'm3api-oauth2/requireCrypto': requireCrypto,
 	} = {
 		...DEFAULT_OPTIONS,
 		...session.defaultOptions,
 		...options,
 	};
-	const codeVerifier = await newCodeVerifier( requireCrypto );
+	const codeVerifier = await newCodeVerifier();
 	Object.defineProperty( session, codeVerifierSymbol, {
 		value: codeVerifier,
 		configurable: true,
@@ -189,7 +196,7 @@ async function initOAuthSession( session, options = {} ) {
 	const params = new URLSearchParams( {
 		response_type: 'code',
 		client_id: client.clientId,
-		...await getCodeChallenge( codeVerifier, requireCrypto ),
+		...await getCodeChallenge( codeVerifier ),
 	} );
 	return `${restUrl}/oauth2/authorize?${params}`;
 }
@@ -203,25 +210,14 @@ async function initOAuthSession( session, options = {} ) {
  * which should provide 258 bits of entropy – more than enough.
  *
  * @private
- * @param {boolean} requireCrypto Whether to require the Web Crypto API
- * or allow falling back to Math.random().
  * @return {string}
  */
-async function newCodeVerifier( requireCrypto ) {
+async function newCodeVerifier() {
 	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz_~';
 
 	const crypto = await webCrypto();
 	const bytes = new Uint8Array( 43 );
-	if ( crypto !== null ) {
-		crypto.getRandomValues( bytes );
-	} else if ( !requireCrypto ) {
-		for ( let i = 0; i &lt; 43; i++ ) {
-			// eslint-disable-next-line no-bitwise
-			bytes[ i ] = ( Math.random() * 256 ) | 0;
-		}
-	} else {
-		throw new NoWebCryptoApiError();
-	}
+	crypto.getRandomValues( bytes );
 
 	let verifier = '';
 	for ( let i = 0; i &lt; 43; i++ ) {
@@ -236,35 +232,24 @@ async function newCodeVerifier( requireCrypto ) {
  *
  * @private
  * @param {string} codeVerifier As generated by {@link newCodeVerifier}.
- * @param {boolean} requireCrypto Whether to require the Web Crypto API
- * or allow falling back to the unhashed code verifier as code challenge.
  * @return {Object} To be mixed into the authorization request parameters.
  */
-async function getCodeChallenge( codeVerifier, requireCrypto ) {
+async function getCodeChallenge( codeVerifier ) {
 	const crypto = await webCrypto();
-	if ( crypto !== null ) {
-		if ( typeof btoa !== 'function' ) {
-			throw new Error( 'btoa() (Base64-encode) is required!' );
-		}
-		const codeVerifierBytes = new TextEncoder().encode( codeVerifier );
-		const hashBytes = await crypto.subtle.digest( 'SHA-256', codeVerifierBytes );
-		const hashString = String.fromCharCode.apply( null, new Uint8Array( hashBytes ) );
-		const codeChallenge = btoa( hashString ) // eslint-disable-line no-undef
-			.replace( /\+/g, '-' )
-			.replace( /\//g, '_' )
-			.replace( /=+$/, '' );
-		return {
-			code_challenge: codeChallenge,
-			code_challenge_method: 'S256',
-		};
-	} else if ( !requireCrypto ) {
-		return {
-			code_challenge: codeVerifier,
-			code_challenge_method: 'plain',
-		};
-	} else {
-		throw new NoWebCryptoApiError();
+	if ( typeof btoa !== 'function' ) {
+		throw new Error( 'btoa() (Base64-encode) is required!' );
 	}
+	const codeVerifierBytes = new TextEncoder().encode( codeVerifier );
+	const hashBytes = await crypto.subtle.digest( 'SHA-256', codeVerifierBytes );
+	const hashString = String.fromCharCode.apply( null, new Uint8Array( hashBytes ) );
+	const codeChallenge = btoa( hashString ) // eslint-disable-line no-undef
+		.replace( /\+/g, '-' )
+		.replace( /\//g, '_' )
+		.replace( /=+$/, '' );
+	return {
+		code_challenge: codeChallenge,
+		code_challenge_method: 'S256',
+	};
 }
 
 /**
@@ -327,11 +312,8 @@ async function completeOAuthSession( session, callbackUrl, options = {} ) {
  *
  * Access tokens generated by MediaWiki are short-lived (4 hours),
  * so they need to be refreshed periodically.
- * A future version will hopefully arrange for this to be done automatically.
- * Until then, if you need the session to be alive for longer,
- * you will need to call this manually from time to time.
- * (Calling it too often shouldn’t cause any ill effects,
- * except for the delay introduced by the additional requests.)
+ * m3api-oauth2 arranges for this to happen automatically,
+ * so there is generally no need to call this function manually.
  *
  * Note that refreshing the access token currently requires the client secret,
  * see {@link https://phabricator.wikimedia.org/T323855 T323855}.
@@ -483,13 +465,13 @@ export {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="NoWebCryptoApiError.html">NoWebCryptoApiError</a></li><li><a href="OAuthClient.html">OAuthClient</a></li></ul><h3>Global</h3><ul><li><a href="global.html#completeOAuthSession">completeOAuthSession</a></li><li><a href="global.html#deserializeOAuthSession">deserializeOAuthSession</a></li><li><a href="global.html#initOAuthSession">initOAuthSession</a></li><li><a href="global.html#refreshOAuthSession">refreshOAuthSession</a></li><li><a href="global.html#serializeOAuthSession">serializeOAuthSession</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="OAuthClient.html">OAuthClient</a></li></ul><h3>Global</h3><ul><li><a href="global.html#completeOAuthSession">completeOAuthSession</a></li><li><a href="global.html#deserializeOAuthSession">deserializeOAuthSession</a></li><li><a href="global.html#handleInvalidAuthorizationError">handleInvalidAuthorizationError</a></li><li><a href="global.html#initOAuthSession">initOAuthSession</a></li><li><a href="global.html#refreshOAuthSession">refreshOAuthSession</a></li><li><a href="global.html#serializeOAuthSession">serializeOAuthSession</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a>
 </footer>
 
 <script>document.addEventListener('DOMContentLoaded', function () { prettyPrint(); });</script>

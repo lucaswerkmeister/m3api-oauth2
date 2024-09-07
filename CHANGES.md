@@ -5,7 +5,7 @@ This file records the changes in each m3api-oauth2 release.
 The annotated tag (and GitHub release) for each version also lists the changes,
 but this file may sometimes contain later improvements (e.g. typo fixes).
 
-## next (not yet released)
+## v0.3.1 (2024-09-07)
 
 - Updated m3api requirement to the latest version (0.8.3) –
   versions 0.8.0-0.8.2 no longer work against Wikimedia production

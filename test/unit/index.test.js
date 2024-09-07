@@ -13,10 +13,10 @@ import {
 } from '../../index.js';
 import * as nodeCrypto from 'crypto';
 import { format } from 'util';
-import chai, { expect } from 'chai';
+import { expect, use } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import FakeTimers from '@sinonjs/fake-timers';
-chai.use( chaiAsPromised );
+use( chaiAsPromised );
 
 class BaseTestSession extends Session {
 

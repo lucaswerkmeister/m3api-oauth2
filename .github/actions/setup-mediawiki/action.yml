@@ -35,7 +35,7 @@ runs:
   using: 'composite'
   steps:
     - name: 'Require Linux'
-      if: 'runner.os != "Linux"'
+      if: "runner.os != 'Linux'"
       shell: 'bash'
       run: |
         printf >&2 'The mediawiki-setup action can only run on a Linux runner.'
@@ -111,7 +111,7 @@ runs:
 
         printf 'admin-username=%s\nadmin-password=%s\n' "$admin_username" "$admin_password" >> "$GITHUB_OUTPUT"
     - name: 'Add additional settings'
-      if: 'inputs.local-settings != ""'
+      if: "inputs.local-settings != ''"
       shell: 'bash'
       env:
         INPUT_LOCAL_SETTINGS: '${{ inputs.local-settings }}'

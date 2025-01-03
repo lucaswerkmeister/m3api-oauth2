@@ -67,7 +67,7 @@ describe( 'initOAuthSession', () => {
 		[ 'defaultOptions', clientOptions, {} ],
 		[ 'defaultOptions', {}, clientOptions ],
 	] ) {
-		it( `gets client from ${name} and generates code challenge`, async () => {
+		it( `gets client from ${ name } and generates code challenge`, async () => {
 			const session = new BaseTestSession( {}, defaultOptions );
 
 			const url = new URL( await initOAuthSession( session, options ) );
@@ -128,7 +128,7 @@ describe( 'completeOAuthSession', () => {
 		[ 'defaultOptions', clientOptions, {} ],
 		[ 'defaultOptions', {}, clientOptions ],
 	] ) {
-		it( `gets client from ${name} and gets access token`, async () => {
+		it( `gets client from ${ name } and gets access token`, async () => {
 			let called = false;
 			class TestSession extends BaseTestSession {
 				async internalPost( apiUrl, urlParams, bodyParams ) {
@@ -243,7 +243,7 @@ describe( 'completeOAuthSession', () => {
 		[ 'defaultOptions', { 'm3api-oauth2/assert': false }, {} ],
 		[ 'options', {}, { 'm3api-oauth2/assert': false } ],
 	].forEach( ( [ name, defaultOptions, options ] ) => {
-		it( `does not add assert to defaultParams with false in ${name}`, async () => {
+		it( `does not add assert to defaultParams with false in ${ name }`, async () => {
 			const session = new SuccessfulTestSession( {}, {
 				...defaultOptions,
 				...clientOptions,
@@ -473,7 +473,7 @@ describe( 'deserializeOAuthSession', () => {
 			[ 'defaultOptions', { 'm3api-oauth2/assert': false }, {} ],
 			[ 'options', {}, { 'm3api-oauth2/assert': false } ],
 		].forEach( ( [ name, defaultOptions, options ] ) => {
-			it( `does not add assert to defaultParams with false in ${name}`, () => {
+			it( `does not add assert to defaultParams with false in ${ name }`, () => {
 				const session = new SuccessfulTestSession( {}, {
 					...defaultOptions,
 					...clientOptions,
@@ -523,7 +523,7 @@ describe( 'deserializeOAuthSession', () => {
 							body = { response: true };
 							break;
 						default:
-							throw new Error( `Unexpected call #${internalGetCall}` );
+							throw new Error( `Unexpected call #${ internalGetCall }` );
 					}
 					return {
 						status: 200,

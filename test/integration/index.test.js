@@ -56,7 +56,7 @@ describe( 'm3api-oauth2', () => {
 
 				const match = line.match( /^([^=]*)='([^']*)'$/ );
 				if ( !match ) {
-					console.warn( `.env: ignoring bad format: ${line}` );
+					console.warn( `.env: ignoring bad format: ${ line }` );
 					continue;
 				}
 				switch ( match[ 1 ] ) {
@@ -96,7 +96,7 @@ describe( 'm3api-oauth2', () => {
 						}
 						break;
 					default:
-						console.warn( `.env: ignoring unknown assignment: ${line}` );
+						console.warn( `.env: ignoring unknown assignment: ${ line }` );
 						break;
 				}
 			}
@@ -117,7 +117,7 @@ describe( 'm3api-oauth2', () => {
 		await $( '#wpName1' ).setValue( mediawikiUsername );
 		await $( '#wpPassword1' ).setValue( mediawikiPassword );
 		await $( '#wpLoginAttempt' ).click();
-		await browser.waitUntil( async () => {
+		await browser.waitUntil( async () => { // eslint-disable-line arrow-body-style
 			return ( await browser.getUrl() ) === 'https://test.wikipedia.beta.wmflabs.org/wiki/Special:BlankPage';
 		} );
 	} );
@@ -140,7 +140,7 @@ describe( 'm3api-oauth2', () => {
 		],
 	] ) {
 		// eslint-disable-next-line no-loop-func
-		it( `node.js, ${description}`, async () => {
+		it( `node.js, ${ description }`, async () => {
 			const makeSession = () => new Session( 'test.wikipedia.beta.wmflabs.org', {
 				formatversion: 2,
 			}, {
@@ -154,9 +154,7 @@ describe( 'm3api-oauth2', () => {
 			await browser.url( authorizeUrl );
 			await $( '#mw-mwoauth-accept button' ).waitForExist();
 			await $( '#mw-mwoauth-accept button' ).click();
-			await browser.waitUntil( async () => {
-				return ( await browser.getUrl() ) !== authorizeUrl;
-			} );
+			await browser.waitUntil( async () => ( await browser.getUrl() ) !== authorizeUrl );
 
 			const callbackUrl = await browser.getUrl();
 			session = makeSession();
@@ -207,9 +205,7 @@ describe( 'm3api-oauth2', () => {
 		await browser.url( authorizeUrl );
 		await $( '#mw-mwoauth-accept button' ).waitForExist();
 		await $( '#mw-mwoauth-accept button' ).click();
-		await browser.waitUntil( async () => {
-			return ( await browser.getUrl() ) !== authorizeUrl;
-		} );
+		await browser.waitUntil( async () => ( await browser.getUrl() ) !== authorizeUrl );
 
 		const callbackUrl = await browser.getUrl();
 		session = makeSession();
@@ -227,7 +223,7 @@ describe( 'm3api-oauth2', () => {
 		expect( response.query.userinfo ).toHaveProperty( 'name', mediawikiUsername );
 
 		const now = new Date().toLocaleTimeString();
-		console.log( `${now} sleeping for 4h5m to let the access token expire...` );
+		console.log( `${ now } sleeping for 4h5m to let the access token expire...` );
 		await new Promise( ( resolve ) => {
 			setTimeout( resolve, ( 4 * 60 + 5 ) * 60 * 1000 );
 		} );

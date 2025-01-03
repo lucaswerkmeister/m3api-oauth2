@@ -13,7 +13,7 @@ import {
  */
 async function webCrypto() {
 	if ( typeof crypto !== 'undefined' ) {
-		return crypto; // eslint-disable-line no-undef
+		return crypto;
 	}
 
 	if ( typeof global === 'object' ) {
@@ -70,6 +70,7 @@ Object.assign( DEFAULT_OPTIONS, {
  * @param {Session} session
  * @param {Object} params
  * @param {Options} options
+ * @return {Object|null|Promise<Object|null>}
  */
 async function handleInvalidAuthorizationError( session, params, options ) {
 	const {
@@ -87,7 +88,7 @@ async function handleInvalidAuthorizationError( session, params, options ) {
 	if ( typeof performance !== 'object' ) {
 		throw new Error( 'performance global is required!' );
 	}
-	if ( performance.now() <= retryUntil ) { // eslint-disable-line no-undef
+	if ( performance.now() <= retryUntil ) {
 		return session.request( params, {
 			...options,
 			'm3api-oauth2/autoRefresh': false,
@@ -170,7 +171,7 @@ async function initOAuthSession( session, options = {} ) {
 		client_id: client.clientId,
 		...await getCodeChallenge( codeVerifier ),
 	} );
-	return `${restUrl}/oauth2/authorize?${params}`;
+	return `${ restUrl }/oauth2/authorize?${ params }`;
 }
 
 /**
@@ -214,7 +215,7 @@ async function getCodeChallenge( codeVerifier ) {
 	const codeVerifierBytes = new TextEncoder().encode( codeVerifier );
 	const hashBytes = await crypto.subtle.digest( 'SHA-256', codeVerifierBytes );
 	const hashString = String.fromCharCode.apply( null, new Uint8Array( hashBytes ) );
-	const codeChallenge = btoa( hashString ) // eslint-disable-line no-undef
+	const codeChallenge = btoa( hashString )
 		.replace( /\+/g, '-' )
 		.replace( /\//g, '_' )
 		.replace( /=+$/, '' );
@@ -249,7 +250,7 @@ async function completeOAuthSession( session, callbackUrl, options = {} ) {
 		...options,
 	};
 	const restUrl = session.apiUrl.replace( /api\.php$/, 'rest.php' );
-	const accessTokenUrl = `${restUrl}/oauth2/access_token`;
+	const accessTokenUrl = `${ restUrl }/oauth2/access_token`;
 	const code = new URL( callbackUrl ).searchParams.get( 'code' );
 	const codeVerifier = session[ codeVerifierSymbol ];
 	delete session[ codeVerifierSymbol ];
@@ -265,7 +266,7 @@ async function completeOAuthSession( session, callbackUrl, options = {} ) {
 	}, { 'user-agent': session.getUserAgent( options ) } );
 
 	if ( status !== 200 ) {
-		throw new Error( `OAuth request returned non-200 HTTP status code: ${status}` );
+		throw new Error( `OAuth request returned non-200 HTTP status code: ${ status }` );
 	}
 
 	const {
@@ -307,7 +308,7 @@ async function refreshOAuthSession( session, options = {} ) {
 		...options,
 	};
 	const restUrl = session.apiUrl.replace( /api\.php$/, 'rest.php' );
-	const accessTokenUrl = `${restUrl}/oauth2/access_token`;
+	const accessTokenUrl = `${ restUrl }/oauth2/access_token`;
 	const clientParams = { client_id: client.clientId };
 	if ( client[ clientSecretSymbol ] !== null ) {
 		clientParams.client_secret = client[ clientSecretSymbol ];
@@ -319,7 +320,7 @@ async function refreshOAuthSession( session, options = {} ) {
 	}, { 'user-agent': session.getUserAgent( options ) } );
 
 	if ( status !== 200 ) {
-		throw new Error( `OAuth request returned non-200 HTTP status code: ${status}` );
+		throw new Error( `OAuth request returned non-200 HTTP status code: ${ status }` );
 	}
 
 	const {
@@ -404,7 +405,7 @@ function deserializeOAuthSession( session, serialization, options = {} ) {
 			value: accessToken,
 			writable: true,
 		} );
-		session.defaultOptions.authorization = `Bearer ${accessToken}`;
+		session.defaultOptions.authorization = `Bearer ${ accessToken }`;
 		if ( assert ) {
 			session.defaultParams.assert = 'user';
 		}

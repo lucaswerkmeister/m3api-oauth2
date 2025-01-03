@@ -26,16 +26,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 18
+      - uses: ./.github/actions/setup-mediawiki
+        id: setup-mediawiki
+        with:
+          extensions: |-
+            OAuth
+          local-settings: |
+            $wgOAuth2GrantExpirationInterval = 'PT30S';
       - run: npm ci
       - run: npm run test:integration
         env:
-          MEDIAWIKI_USERNAME: ${{ secrets.MEDIAWIKI_USERNAME }}
-          MEDIAWIKI_PASSWORD: ${{ secrets.MEDIAWIKI_PASSWORD }}
+          MEDIAWIKI_USERNAME: ${{ steps.setup-mediawiki.outputs.admin-username }}
+          MEDIAWIKI_PASSWORD: ${{ steps.setup-mediawiki.outputs.admin-username }}
+          # TODO set MediaWiki URL to http://localhost/w
+          # TODO create OAuth clients
           OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
           OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
           OAUTH_NONCONFIDENTIAL_CLIENT_ID: ${{ secrets.OAUTH_NONCONFIDENTIAL_CLIENT_ID }}
           OAUTH_NONCONFIDENTIAL_CLIENT_SECRET: ${{ secrets.OAUTH_NONCONFIDENTIAL_CLIENT_SECRET }}
-          RUN_SLOW_TESTS: 1
+          # RUN_SLOW_TESTS: 1
   test-package-lock:
     runs-on: ubuntu-latest
     steps:

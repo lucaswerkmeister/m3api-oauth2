@@ -1,0 +1,131 @@
+name: 'Set up MediaWiki'
+# TODO Apache httpd? php -S?
+description: 'Install MediaWiki, optionally with skins and/or extensions, and serve it using Apache httpd.'
+inputs:
+  version:
+    description: 'The version of MediaWiki (and skins and/or extensions) to check out. Must be a valid ref in mediawiki/core.git, such as master (dev branch), REL1_43 (release branch), or 1.43.0 (tag).'
+    default: 'master' # T377562
+  extensions:
+    description: 'Extensions to install, if any. One per line, without trailing newline (use `|-` YAML multiline string syntax). Each extension may be a plain name, in which case it is cloned from Wikimedia Gerrit below mediawiki/extensions/, or a full Git URL to clone.'
+    default: ''
+  skins:
+    description: 'Skins to install, if any. One per line, without trailing newline (use `|-` YAML multiline string syntax). Each string may be a plain name, in which case it is cloned from Wikimedia Gerrit below mediawiki/skins/, or a full Git URL to clone.'
+    default: |-
+      Vector
+  local-settings:
+    description: 'Additional settings to append to LocalSettings.php. Use `|` YAML multiline string syntax.'
+    default: ''
+  admin-username:
+    description: 'The user name of the initial MediaWiki admin user. Also exposed as the admin-username output.'
+    default: 'CI Wiki Admin'
+  admin-password:
+    description: 'The password of the initial MediaWiki admin user. If blank, a random password is generated. Also exposed as the admin-password output.'
+    default: ''
+  port:
+    description: 'The HTTP port under which to serve MediaWiki.'
+    default: '80'
+outputs:
+  admin-username:
+    description: 'The user name of the initial MediaWiki admin user.'
+    value: '${{ steps.install.outputs.admin-username }}'
+  admin-password:
+    description: 'The password of the initial MediaWiki admin user.'
+    value: '${{ steps.install.outputs.admin-password }}'
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Require Linux'
+      if: 'runner.os != "Linux"'
+      shell: 'bash'
+      run: |
+        printf >&2 'The mediawiki-setup action can only run on a Linux runner.'
+        exit 1
+    - name: 'Clone MediaWiki core'
+      uses: 'actions/checkout@v4'
+      with:
+        repository: 'wikimedia/mediawiki'
+        ref: '${{ inputs.version }}'
+        path: 'w'
+    - name: 'Clone extensions and skins'
+      shell: 'bash'
+      env:
+        INPUT_VERSION: '${{ inputs.version }}'
+        INPUT_EXTENSIONS: '${{ inputs.extensions }}'
+        INPUT_SKINS: '${{ inputs.skins }}'
+      run: |
+        while IFS= read -r extension; do
+            if [[ ! $extension = */* ]]; then
+                extension="https://gerrit.wikimedia.org/r/mediawiki/extensions/$extension.git"
+            fi
+            git -C w/extensions/ clone --depth=1 --branch="$INPUT_VERSION" -- "$extension"
+        done <<< "$INPUT_EXTENSIONS"
+        while IFS= read -r skin; do
+            if [[ ! $skin = */* ]]; then
+                skin="https://gerrit.wikimedia.org/r/mediawiki/skins/$skin.git"
+            fi
+            git -C w/skins/ clone --depth=1 --branch="$INPUT_VERSION" -- "$skin"
+        done <<< "$INPUT_SKINS"
+    - name: 'Set up composer-merge-plugin'
+      shell: 'bash'
+      run: |
+        cat > 'w/composer.local.json' << 'EOF'
+        {
+        	"extra": {
+        		"merge-plugin": {
+        			"include": [
+        				"extensions/*/composer.json",
+        				"skins/*/composer.json"
+        			]
+        		}
+        	}
+        }
+        EOF
+    - name: 'Install dependencies'
+      shell: 'bash'
+      run: |
+        composer -d w/ install
+    - name: 'Run installer'
+      id: 'install'
+      shell: 'bash'
+      env:
+        INPUTS_ADMIN_USERNAME: '${{ inputs.admin-username }}'
+        INPUTS_ADMIN_PASSWORD: '${{ inputs.admin-password }}'
+      run: |
+        cd w/
+
+        if [[ -e maintenance/run.php ]]; then
+            install=(php maintenance/run.php install)
+        else
+            install=(php maintenance/install.php)
+        fi
+
+        admin_username=$INPUTS_ADMIN_USERNAME
+        admin_password=$INPUTS_ADMIN_PASSWORD
+        if [[ ! $admin_password ]]; then
+            # (ab)use mktemp(1) as a password generator (16 chars), as pwgen(1) is probably not installed;
+            # modern versions use getrandom(2) so this isn’t as bad as it sounds ;)
+            admin_password=$(mktemp -u XXXXXXXXXXXXXXXX)
+        fi
+
+        "${install[@]}" --dbtype=sqlite --scriptpath=/w --with-extensions --with-developmentsettings --pass="$admin_password" 'CI Wiki' "$admin_username"
+
+        printf 'admin-username=%s\nadmin-password=%s\n' "$admin_username" "$admin_password" >> "$GITHUB_OUTPUT"
+    - name: 'Add additional settings'
+      if: 'inputs.local-settings != ""'
+      shell: 'bash'
+      env:
+        INPUT_LOCAL_SETTINGS: '${{ inputs.local-settings }}'
+      run: |
+        printf '%s' "$INPUT_LOCAL_SETTINGS" >> w/LocalSettings.php
+    - name: 'Start PHP web server'
+      shell: 'bash'
+      env:
+        INPUT_PORT: '${{ inputs.port }}'
+      run: |
+        php -S localhost:"$INPUT_PORT" &
+        disown -h -a
+# TODO: for the below, we’d have to at least symlink w/ somewhere
+#     - name: 'Start Apache httpd'
+#       shell: 'bash'
+#       run: |
+#         sudo systemctl start apache2

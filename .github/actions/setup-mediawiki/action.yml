@@ -122,7 +122,7 @@ runs:
       env:
         INPUT_PORT: '${{ inputs.port }}'
       run: |
-        php -S localhost:"$INPUT_PORT" &
+        sudo php -S localhost:"$INPUT_PORT" &
         disown -h -a
 # TODO: for the below, we’d have to at least symlink w/ somewhere
 #     - name: 'Start Apache httpd'

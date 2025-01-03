@@ -34,6 +34,8 @@ jobs:
           local-settings: |
             $wgOAuth2GrantExpirationInterval = 'PT30S';
       - run: npm ci
+      - run: |
+          curl -L 'http://localhost/w/index.php?title=Special:Version'
       - run: npm run test:integration
         env:
           MEDIAWIKI_USERNAME: ${{ steps.setup-mediawiki.outputs.admin-username }}

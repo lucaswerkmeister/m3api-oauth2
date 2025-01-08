@@ -17,20 +17,22 @@ const userAgent = 'm3api-oauth2-integration-tests (https://github.com/lucaswerkm
 
 describe( 'm3api-oauth2', () => {
 
-	let mediawikiUsername, mediawikiPassword,
+	let mediawikiFullScriptPath,
+		mediawikiUsername, mediawikiPassword,
 		oauthClientId, oauthClientSecret,
 		oauthNonconfidentialClientId, oauthNonconfidentialClientSecret,
-		runSlowTests;
+		slowTestSleep;
 
 	before( 'load credentials', async () => {
 		// note: this code is based on similar code in m3api
+		mediawikiFullScriptPath = process.env.MEDIAWIKI_FULL_SCRIPT_PATH;
 		mediawikiUsername = process.env.MEDIAWIKI_USERNAME;
 		mediawikiPassword = process.env.MEDIAWIKI_PASSWORD;
 		oauthClientId = process.env.OAUTH_CLIENT_ID;
 		oauthClientSecret = process.env.OAUTH_CLIENT_SECRET;
 		oauthNonconfidentialClientId = process.env.OAUTH_NONCONFIDENTIAL_CLIENT_ID;
 		oauthNonconfidentialClientSecret = process.env.OAUTH_NONCONFIDENTIAL_CLIENT_SECRET;
-		runSlowTests = process.env.RUN_SLOW_TESTS;
+		slowTestSleep = process.env.SLOW_TEST_SLEEP;
 
 		if (
 			!mediawikiUsername || !mediawikiPassword ||
@@ -60,6 +62,11 @@ describe( 'm3api-oauth2', () => {
 					continue;
 				}
 				switch ( match[ 1 ] ) {
+					case 'MEDIAWIKI_FULL_SCRIPT_PATH':
+						if ( !mediawikiFullScriptPath ) {
+							mediawikiFullScriptPath = match[ 2 ];
+						}
+						break;
 					case 'MEDIAWIKI_USERNAME':
 						if ( !mediawikiUsername ) {
 							mediawikiUsername = match[ 2 ];
@@ -90,9 +97,9 @@ describe( 'm3api-oauth2', () => {
 							oauthNonconfidentialClientSecret = match[ 2 ];
 						}
 						break;
-					case 'RUN_SLOW_TESTS':
-						if ( runSlowTests === undefined ) {
-							runSlowTests = match[ 2 ];
+					case 'SLOW_TEST_SLEEP':
+						if ( slowTestSleep === undefined ) {
+							slowTestSleep = match[ 2 ];
 						}
 						break;
 					default:
@@ -105,6 +112,7 @@ describe( 'm3api-oauth2', () => {
 
 	before( 'log in', async () => {
 		if (
+			!mediawikiFullScriptPath ||
 			!mediawikiUsername || !mediawikiPassword ||
 			!oauthClientId || !oauthClientSecret ||
 			!oauthNonconfidentialClientId || !oauthNonconfidentialClientSecret
@@ -112,13 +120,15 @@ describe( 'm3api-oauth2', () => {
 			throw new Error( 'Incomplete environment!' );
 		}
 
-		await browser.url( 'https://test.wikipedia.beta.wmflabs.org/wiki/Special:UserLogin?returnto=Special:BlankPage' );
+		// use returntoquery= to ensure that the returned-to URL doesn’t use the short URL,
+		// so we can recognize it below without having to configure the article path :)
+		await browser.url( `${ mediawikiFullScriptPath }/index.php?title=Special:UserLogin&returnto=Special:BlankPage&returntoquery=x=y` );
 		await $( '#wpLoginAttempt' ).waitForExist();
 		await $( '#wpName1' ).setValue( mediawikiUsername );
 		await $( '#wpPassword1' ).setValue( mediawikiPassword );
 		await $( '#wpLoginAttempt' ).click();
 		await browser.waitUntil( async () => { // eslint-disable-line arrow-body-style
-			return ( await browser.getUrl() ) === 'https://test.wikipedia.beta.wmflabs.org/wiki/Special:BlankPage';
+			return ( await browser.getUrl() ) === `${ mediawikiFullScriptPath }/index.php?title=Special:BlankPage&x=y`;
 		} );
 	} );
 
@@ -141,7 +151,7 @@ describe( 'm3api-oauth2', () => {
 	] ) {
 		// eslint-disable-next-line no-loop-func
 		it( `node.js, ${ description }`, async () => {
-			const makeSession = () => new Session( 'test.wikipedia.beta.wmflabs.org', {
+			const makeSession = () => new Session( `${ mediawikiFullScriptPath }/api.php`, {
 				formatversion: 2,
 			}, {
 				userAgent,
@@ -186,13 +196,12 @@ describe( 'm3api-oauth2', () => {
 	}
 
 	it( 'SLOW: node.js, automatic refresh', async function () {
-		if ( runSlowTests === undefined || [ 'no', 'n', 'false', '0' ].includes( runSlowTests.toLowerCase() ) ) {
+		if ( slowTestSleep === undefined || slowTestSleep === '' ) {
 			this.skip();
 			return;
 		}
-		this.timeout( ( 4 * 60 + 10 ) * 60 * 1000 );
 
-		const makeSession = () => new Session( 'test.wikipedia.beta.wmflabs.org', {
+		const makeSession = () => new Session( `${ mediawikiFullScriptPath }/api.php`, {
 			formatversion: 2,
 		}, {
 			userAgent,
@@ -223,9 +232,9 @@ describe( 'm3api-oauth2', () => {
 		expect( response.query.userinfo ).toHaveProperty( 'name', mediawikiUsername );
 
 		const now = new Date().toLocaleTimeString();
-		console.log( `${ now } sleeping for 4h5m to let the access token expire...` );
+		console.log( `${ now } sleeping for ${ slowTestSleep }s to let the access token expire...` );
 		await new Promise( ( resolve ) => {
-			setTimeout( resolve, ( 4 * 60 + 5 ) * 60 * 1000 );
+			setTimeout( resolve, parseInt( slowTestSleep, 10 ) * 1000 );
 		} );
 
 		session = makeSession();

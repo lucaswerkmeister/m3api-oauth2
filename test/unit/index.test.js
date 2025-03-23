@@ -201,6 +201,32 @@ describe( 'completeOAuthSession', () => {
 		expect( called ).to.be.true;
 	} );
 
+	it( 'supports relative callback URL', async () => {
+		let called = false;
+		class TestSession extends BaseTestSession {
+			async internalPost( apiUrl, urlParams, bodyParams ) {
+				expect( bodyParams ).to.have.property( 'code', 'CODE' );
+				expect( called, 'not called yet' ).to.be.false;
+				called = true;
+				return {
+					status: 200,
+					headers: {},
+					body: {
+						token_type: 'Bearer',
+						expires_in: 14400,
+						access_token: 'ACCESSTOKEN',
+						refresh_token: 'REFRESHTOKEN',
+					},
+				};
+			}
+		}
+		const session = new TestSession( {}, {
+			...clientOptions,
+		} );
+		await completeOAuthSession( session, '/?code=CODE' );
+		expect( called ).to.be.true;
+	} );
+
 	it( 'passes user agent into internalPost()', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {

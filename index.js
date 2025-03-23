@@ -230,12 +230,13 @@ async function getCodeChallenge( codeVerifier ) {
  * and complete an OAuth session.
  *
  * Call this method when the user returns from the {@link initOAuthSession} result,
- * with the full URL they were redirected to.
+ * with the URL they were redirected to (including the search / query parameters).
  * The m3api session will be set up for authenticated requests
  * (becoming an OAuth session).
  *
  * @param {Session} session The m3api session to which the authorization will apply.
  * @param {string} callbackUrl The URL the user was redirected to.
+ * This may be an absolute or relative URL; only the parameters are important.
  * @param {Options} [options] Request options.
  * The 'm3api-oauth2/client' option must be specified
  * either here or in the session’s default options.
@@ -251,7 +252,7 @@ async function completeOAuthSession( session, callbackUrl, options = {} ) {
 	};
 	const restUrl = session.apiUrl.replace( /api\.php$/, 'rest.php' );
 	const accessTokenUrl = `${ restUrl }/oauth2/access_token`;
-	const code = new URL( callbackUrl ).searchParams.get( 'code' );
+	const code = new URL( callbackUrl, 'http://ignored.invalid' ).searchParams.get( 'code' );
 	const codeVerifier = session[ codeVerifierSymbol ];
 	delete session[ codeVerifierSymbol ];
 	if ( !code ) {

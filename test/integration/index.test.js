@@ -132,21 +132,33 @@ describe( 'm3api-oauth2', () => {
 		} );
 	} );
 
-	for ( const [ description, clientFactory, supportsRefresh ] of [
+	for ( const [ description, clientFactory, supportsRefresh, callbackUrlFilter ] of [
 		[
 			'confidential client with secret',
 			() => new OAuthClient( oauthClientId, oauthClientSecret ),
 			true,
+			( callbackUrl ) => callbackUrl,
 		],
 		[
 			'non-confidential client with secret',
 			() => new OAuthClient( oauthNonconfidentialClientId, oauthNonconfidentialClientSecret ),
 			true,
+			( callbackUrl ) => callbackUrl,
 		],
 		[
 			'non-confidential client without secret',
 			() => new OAuthClient( oauthNonconfidentialClientId ),
 			false, // T323855
+			( callbackUrl ) => callbackUrl,
+		],
+		[
+			'relative callback URL',
+			() => new OAuthClient( oauthClientId, oauthClientSecret ),
+			true,
+			( callbackUrl ) => {
+				const url = new URL( callbackUrl );
+				return url.pathname + url.search; // no origin
+			},
 		],
 	] ) {
 		// eslint-disable-next-line no-loop-func
@@ -173,7 +185,7 @@ describe( 'm3api-oauth2', () => {
 			const callbackUrl = await browser.getUrl();
 			session = makeSession();
 			deserializeOAuthSession( session, serialization );
-			await completeOAuthSession( session, callbackUrl );
+			await completeOAuthSession( session, callbackUrlFilter( callbackUrl ) );
 			serialization = serializeOAuthSession( session );
 
 			session = makeSession();

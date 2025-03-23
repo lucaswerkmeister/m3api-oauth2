@@ -7,6 +7,7 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 
 ## next (not yet released)
 
+- The callback URL passed into `completeOAuthSession()` may now be a relative URL.
 - Improved error handling in `completeOAuthSession()`.
 - Updated dependencies.
 

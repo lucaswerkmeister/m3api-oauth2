@@ -65,7 +65,7 @@ describe( 'initOAuthSession', () => {
 
 	for ( const [ name, defaultOptions, options ] of [
 		[ 'defaultOptions', clientOptions, {} ],
-		[ 'defaultOptions', {}, clientOptions ],
+		[ 'options', {}, clientOptions ],
 	] ) {
 		it( `gets client from ${ name } and generates code challenge`, async () => {
 			const session = new BaseTestSession( {}, defaultOptions );
@@ -126,7 +126,7 @@ describe( 'completeOAuthSession', () => {
 
 	for ( const [ name, defaultOptions, options ] of [
 		[ 'defaultOptions', clientOptions, {} ],
-		[ 'defaultOptions', {}, clientOptions ],
+		[ 'options', {}, clientOptions ],
 	] ) {
 		it( `gets client from ${ name } and gets access token`, async () => {
 			let called = false;

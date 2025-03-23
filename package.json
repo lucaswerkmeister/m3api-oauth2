@@ -36,7 +36,7 @@
 		"@wdio/spec-reporter": "^8.12.2",
 		"chai": "^5.1.1",
 		"chai-as-promised": "^8.0.0",
-		"chromedriver": "^131.0.4",
+		"chromedriver": "^134.0.5",
 		"eslint": "^8.44.0",
 		"eslint-config-wikimedia": "^0.28.2",
 		"eslint-plugin-chai-friendly": "^1.0.1",

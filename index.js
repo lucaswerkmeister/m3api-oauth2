@@ -254,6 +254,9 @@ async function completeOAuthSession( session, callbackUrl, options = {} ) {
 	const code = new URL( callbackUrl ).searchParams.get( 'code' );
 	const codeVerifier = session[ codeVerifierSymbol ];
 	delete session[ codeVerifierSymbol ];
+	if ( !code ) {
+		throw new Error( `Invalid callback URL (missing ?code= parameter): ${ callbackUrl }` );
+	}
 	const clientParams = { client_id: client.clientId };
 	if ( client[ clientSecretSymbol ] !== null ) {
 		clientParams.client_secret = client[ clientSecretSymbol ];

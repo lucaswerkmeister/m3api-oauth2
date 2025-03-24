@@ -253,6 +253,21 @@ describe( 'completeOAuthSession', () => {
 		} );
 	} );
 
+	it( 'throws if code is missing', async () => {
+		let called = false;
+		class TestSession extends BaseTestSession {
+			async internalPost() {
+				called = true;
+				expect.fail( 'this test should not call internalPost()' );
+			}
+		}
+
+		const session = new TestSession( {}, clientOptions );
+		await expect( completeOAuthSession( session, 'http://localhost:12345/oauth/callback' ) )
+			.to.be.rejectedWith( 'Invalid callback URL' );
+		expect( called ).to.be.false;
+	} );
+
 	it( 'throws if status is not 200', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {

@@ -185,7 +185,13 @@ describe( 'm3api-oauth2', () => {
 			const callbackUrl = await browser.getUrl();
 			session = makeSession();
 			deserializeOAuthSession( session, serialization );
-			await completeOAuthSession( session, callbackUrlFilter( callbackUrl ) );
+			try {
+				await completeOAuthSession( session, callbackUrlFilter( callbackUrl ) );
+			} catch ( e ) {
+				console.error( 'caught exception', e );
+				console.error( 'caught exception cause', e.cause );
+				throw e;
+			}
 			serialization = serializeOAuthSession( session );
 
 			session = makeSession();

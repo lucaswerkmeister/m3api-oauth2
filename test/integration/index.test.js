@@ -164,7 +164,11 @@ describe( 'm3api-oauth2', () => {
 			await browser.url( authorizeUrl );
 			await $( '#mw-mwoauth-accept button' ).waitForExist();
 			await $( '#mw-mwoauth-accept button' ).click();
-			await browser.waitUntil( async () => ( await browser.getUrl() ) !== authorizeUrl );
+			await browser.waitUntil( async () => {
+				const currentOrigin = new URL( await browser.getUrl() ).origin;
+				const mediawikiOrigin = new URL( mediawikiFullScriptPath ).origin;
+				return currentOrigin !== mediawikiOrigin;
+			} );
 
 			const callbackUrl = await browser.getUrl();
 			session = makeSession();
@@ -214,7 +218,11 @@ describe( 'm3api-oauth2', () => {
 		await browser.url( authorizeUrl );
 		await $( '#mw-mwoauth-accept button' ).waitForExist();
 		await $( '#mw-mwoauth-accept button' ).click();
-		await browser.waitUntil( async () => ( await browser.getUrl() ) !== authorizeUrl );
+		await browser.waitUntil( async () => {
+			const currentOrigin = new URL( await browser.getUrl() ).origin;
+			const mediawikiOrigin = new URL( mediawikiFullScriptPath ).origin;
+			return currentOrigin !== mediawikiOrigin;
+		} );
 
 		const callbackUrl = await browser.getUrl();
 		session = makeSession();

@@ -7,6 +7,7 @@ import {
 	OAuthClient,
 	initOAuthSession,
 	completeOAuthSession,
+	isCompleteOAuthSession,
 	refreshOAuthSession,
 	serializeOAuthSession,
 	deserializeOAuthSession,
@@ -326,6 +327,49 @@ describe( 'completeOAuthSession', () => {
 	it( 'throws if client option not specified', async () => {
 		expect( completeOAuthSession( new BaseTestSession(), '', {} ) )
 			.to.be.rejectedWith( /m3api-oauth2\/client/ );
+	} );
+
+} );
+
+describe( 'isCompleteOAuthSession', () => {
+
+	it( 'returns false for non-OAuth session', () => {
+		expect( isCompleteOAuthSession( new BaseTestSession() ) )
+			.to.be.false;
+	} );
+
+	it( 'returns false for initialized session', async () => {
+		const session = new BaseTestSession( {}, clientOptions );
+		await initOAuthSession( session );
+		expect( isCompleteOAuthSession( session ) )
+			.to.be.false;
+	} );
+
+	for ( const [ name, serializationRest ] of [
+		[ 'with refresh token', { refreshToken: 'refresh token' } ],
+		[ 'without refresh token', {} ],
+	] ) {
+		it( `returns true for complete session ${ name }`, () => {
+			const session = new BaseTestSession( {}, clientOptions );
+			deserializeOAuthSession( session, {
+				accessToken: 'access token',
+				...serializationRest,
+			} );
+			expect( isCompleteOAuthSession( session ) )
+				.to.be.true;
+		} );
+	}
+
+	it( 'returns false for manually authenticated session', () => {
+		// this isn’t guaranteed, but it probably makes more sense to return false than true here
+		// (the session can be used if a valid authorization header was supplied for some reason,
+		// but it’s not complete from m3api-oauth2’s perspective)
+		const session = new BaseTestSession( {}, {
+			...clientOptions,
+			authorization: 'Bearer some-owner-only-client-token',
+		} );
+		expect( isCompleteOAuthSession( session ) )
+			.to.be.false;
 	} );
 
 } );

@@ -7,7 +7,17 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 
 ## next (not yet released)
 
-- Made `initOAuthSession()` idempotent (return the same URL if called repeatedly).
+- Two changes are meant to make it easier to use m3api-oauth2 correctly:
+  A new `isCompleteOAuthSession()` function is available,
+  and `initOAuthSession()` is now idempotent.
+  This should make it unnecessary for users of the library
+  to track or deduce the current state of the authorization flow
+  (i.e., whether `initOAuthSession()` was already called,
+  and whether `completeOAuthSession()` was already called).
+  If `isCompleteOAuthSession()` returns `false`, the user is not logged yet –
+  call `initOAuthSession()` to get the authorization URL
+  (it doesn’t matter if it was already called or not);
+  if `isCompleteOAuthSession()` returns `true`, the user is logged in.
 
 ## v0.3.2 (2025-03-24)
 

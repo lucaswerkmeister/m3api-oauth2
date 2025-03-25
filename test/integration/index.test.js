@@ -8,6 +8,7 @@ import {
 	OAuthClient,
 	initOAuthSession,
 	completeOAuthSession,
+	isCompleteOAuthSession,
 	refreshOAuthSession,
 	serializeOAuthSession,
 	deserializeOAuthSession,
@@ -174,6 +175,8 @@ describe( 'm3api-oauth2', () => {
 			const authorizeUrl = await initOAuthSession( session );
 			expect( await initOAuthSession( session ) )
 				.toBe( authorizeUrl );
+			expect( isCompleteOAuthSession( session ) )
+				.toBe( false );
 			let serialization = serializeOAuthSession( session );
 			await browser.url( authorizeUrl );
 			await $( '#mw-mwoauth-accept button' ).waitForExist();
@@ -188,10 +191,14 @@ describe( 'm3api-oauth2', () => {
 			session = makeSession();
 			deserializeOAuthSession( session, serialization );
 			await completeOAuthSession( session, callbackUrlFilter( callbackUrl ) );
+			expect( isCompleteOAuthSession( session ) )
+				.toBe( true );
 			serialization = serializeOAuthSession( session );
 
 			session = makeSession();
 			deserializeOAuthSession( session, serialization );
+			expect( isCompleteOAuthSession( session ) )
+				.toBe( true );
 			let response = await session.request( {
 				action: 'query',
 				meta: set( 'userinfo' ),

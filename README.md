@@ -69,6 +69,19 @@ Note that you shouldn’t make the serialization directly available to the user
 since that would allow the user to extract the access token and impersonate your application.
 Use a session store instead, e.g. based on Redis if you’re on Wikimedia Toolforge.
 
+To keep track of the current state of the session,
+use the `isCompleteOAuthSession()` function.
+If `isCompleteOAuthSession( session )` returns `true`, then the user is logged in.
+If it returns `false`, then the user is not logged in yet –
+call `initOAuthSession( session )` to get the authorization URL,
+and send the user to that URL to log in.
+Calling `initOAuthSession( session )` multiple times
+(e.g. because the user visits your tool several times before following the authorization URL)
+is fine and will return the same URL
+(assuming you’re serializing+deserializing the session if necessary),
+so don’t bother saving the authorization URL anywhere –
+just call `initOAuthSession( session )` again whenever you need the URL.
+
 ### Non-confidential clients
 
 MediaWiki also supports non-confidential clients,

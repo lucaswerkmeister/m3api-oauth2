@@ -105,7 +105,7 @@ describe( 'initOAuthSession', () => {
 	} );
 
 	it( 'saves code challenge in session', async () => {
-		const session = new BaseTestSession( {}, { 'm3api-oauth2/client': client } );
+		const session = new BaseTestSession( {}, clientOptions );
 
 		await initOAuthSession( session );
 		const serialization = serializeOAuthSession( session );

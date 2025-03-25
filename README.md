@@ -8,7 +8,7 @@ making it easy to make requests authenticated via [OAuth 2.0][OAuth].
 ## Usage
 
 Propose an OAuth 2.0 client on [Special:OAuthConsumerRegistration/propose/oauth2][],
-load its credentials (e.g. from the process envirnoment) into an `OAuthClient` instance,
+load its credentials (e.g. from the process environment) into an `OAuthClient` instance,
 and attach that to an m3api session in the request options:
 
 ```js

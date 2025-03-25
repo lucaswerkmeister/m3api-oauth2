@@ -172,6 +172,8 @@ describe( 'm3api-oauth2', () => {
 
 			let session = makeSession();
 			const authorizeUrl = await initOAuthSession( session );
+			expect( await initOAuthSession( session ) )
+				.toBe( authorizeUrl );
 			let serialization = serializeOAuthSession( session );
 			await browser.url( authorizeUrl );
 			await $( '#mw-mwoauth-accept button' ).waitForExist();

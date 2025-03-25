@@ -146,6 +146,11 @@ class OAuthClient {
  * but should resolve basically immediately
  * (no server communication is involved).
  *
+ * Calling this function multiple times on the same session
+ * (or on a serialized+deserialized copy) returns the same URL.
+ * Therefore, it’s recommended to call this function each time you need the URL,
+ * rather than storing the URL externally (e.g. in the user session).
+ *
  * @param {Session} session The m3api session with which the authorization will be associated.
  * @param {Options} [options] Request options.
  * The 'm3api-oauth2/client' option must be specified
@@ -160,16 +165,18 @@ async function initOAuthSession( session, options = {} ) {
 		...session.defaultOptions,
 		...options,
 	};
-	const codeVerifier = await newCodeVerifier();
-	Object.defineProperty( session, codeVerifierSymbol, {
-		value: codeVerifier,
-		configurable: true,
-	} );
+	if ( !Object.prototype.hasOwnProperty.call( session, codeVerifierSymbol ) ) {
+		const codeVerifier = await newCodeVerifier();
+		Object.defineProperty( session, codeVerifierSymbol, {
+			value: codeVerifier,
+			configurable: true,
+		} );
+	}
 	const restUrl = session.apiUrl.replace( /api\.php$/, 'rest.php' );
 	const params = new URLSearchParams( {
 		response_type: 'code',
 		client_id: client.clientId,
-		...await getCodeChallenge( codeVerifier ),
+		...await getCodeChallenge( session[ codeVerifierSymbol ] ),
 	} );
 	return `${ restUrl }/oauth2/authorize?${ params }`;
 }

@@ -115,6 +115,15 @@ describe( 'initOAuthSession', () => {
 			.and.to.match( /^[A-Za-z0-9_~]{43}$/, 'our code verifier' );
 	} );
 
+	it( 'returns same URL if called again', async () => {
+		const session = new BaseTestSession( {}, clientOptions );
+
+		const url1 = await initOAuthSession( session );
+		const url2 = await initOAuthSession( session );
+
+		expect( url1 ).to.equal( url2 );
+	} );
+
 	it( 'throws if client option not specified', async () => {
 		await expect( initOAuthSession( new BaseTestSession(), {} ) )
 			.to.be.rejectedWith( /m3api-oauth2\/client/ );

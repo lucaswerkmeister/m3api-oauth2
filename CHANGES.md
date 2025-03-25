@@ -7,7 +7,7 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 
 ## next (not yet released)
 
-No changes yet.
+- Made `initOAuthSession()` idempotent (return the same URL if called repeatedly).
 
 ## v0.3.2 (2025-03-24)
 

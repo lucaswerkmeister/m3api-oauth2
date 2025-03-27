@@ -5,7 +5,7 @@ This file records the changes in each m3api-oauth2 release.
 The annotated tag (and GitHub release) for each version also lists the changes,
 but this file may sometimes contain later improvements (e.g. typo fixes).
 
-## next (not yet released)
+## v0.3.3 (2025-03-27)
 
 - Two changes are meant to make it easier to use m3api-oauth2 correctly:
   A new `isCompleteOAuthSession()` function is available,

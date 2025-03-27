@@ -1,6 +1,6 @@
 {
 	"name": "m3api-oauth2",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"description": "m3api extension package to authenticate using OAuth 2.0.",
 	"main": "index.js",
 	"type": "module",

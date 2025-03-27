@@ -294,11 +294,12 @@ async function completeOAuthSession( session, callbackUrl, options = {} ) {
 /**
  * Determine whether the session is complete.
  *
- * If this function returns true, then {@link completeOAuthSession} was successfully called on it,
- * and the session can be used to make authenticated requests.
+ * If this function returns true,
+ * then the session was successfully {@link completeOAuthSession completed}
+ * and can be used to make authenticated requests.
  * (This doesn’t guarantee that the requests will succeed,
  * as the user may have revoked the permission in the meantime.)
- * If it returns false, then it has not been completed yet,
+ * If the function returns false, then the session has not been completed yet,
  * and you should call {@link initOAuthSession} and send the user to the returned authorization URL.
  *
  * @param {Session} session

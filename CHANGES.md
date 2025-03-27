@@ -18,6 +18,7 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
   call `initOAuthSession()` to get the authorization URL
   (it doesn’t matter if it was already called or not);
   if `isCompleteOAuthSession()` returns `true`, the user is logged in.
+- Updated dependencies.
 
 ## v0.3.2 (2025-03-24)
 

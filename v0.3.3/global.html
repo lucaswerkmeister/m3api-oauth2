@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>m3api: Global</title>
+    <title>m3api-oauth2: Global</title>
 
     <script defer src="scripts/prettify/prettify.js"></script>
     <script defer src="scripts/prettify/lang-css.js"></script>
@@ -15,7 +15,7 @@
 
 <div id="main">
 
-    <p class="version-warning"><strong>Warning:</strong> This is an old version. The latest stable version is <a href="../v0.3.3/global.html">v0.3.3</a>.</p>
+    <!-- VERSION-WARNING -->
 
     <h1 class="page-title">Global</h1>
 
@@ -115,7 +115,7 @@
     <p>Handle an authorization callback from the user,
 and complete an OAuth session.</p>
 <p>Call this method when the user returns from the <a href="global.html#initOAuthSession">initOAuthSession</a> result,
-with the full URL they were redirected to.
+with the URL they were redirected to (including the search / query parameters).
 The m3api session will be set up for authenticated requests
 (becoming an OAuth session).</p>
 </div>
@@ -210,7 +210,8 @@ The m3api session will be set up for authenticated requests
 
             
 
-            <td class="description last"><p>The URL the user was redirected to.</p></td>
+            <td class="description last"><p>The URL the user was redirected to.
+This may be an absolute or relative URL; only the parameters are important.</p></td>
         </tr>
 
     
@@ -286,7 +287,7 @@ either here or in the session’s default options.</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line299">line 299</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line251">line 251</a>
     </li></ul></dd>
     
 
@@ -501,7 +502,7 @@ if you customize the options, it’s recommended to pass the same options to bot
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line441">line 441</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line414">line 414</a>
     </li></ul></dd>
     
 
@@ -537,7 +538,7 @@ if you customize the options, it’s recommended to pass the same options to bot
     
 
     
-    <h4 class="name" id="handleInvalidAuthorizationError"><span class="type-signature">(async) </span>handleInvalidAuthorizationError<span class="signature">(session, params, options)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="handleInvalidAuthorizationError"><span class="type-signature">(async) </span>handleInvalidAuthorizationError<span class="signature">(session, params, options)</span><span class="type-signature"> &rarr; {Object|null|Promise.&lt;(Object|null)>}</span></h4>
     
 
     
@@ -686,7 +687,7 @@ retrying the request.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line110">line 110</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line75">line 75</a>
     </li></ul></dd>
     
 
@@ -711,6 +712,30 @@ retrying the request.</p>
 
 
 
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Object</span>
+|
+
+<span class="param-type">null</span>
+|
+
+<span class="param-type">Promise.&lt;(Object|null)></span>
+
+
+    </dd>
+</dl>
+
+    
 
 
 
@@ -737,6 +762,10 @@ then later call <a href="global.html#completeOAuthSession">completeOAuthSession<
 <p>This function needs to be async for technical reasons,
 but should resolve basically immediately
 (no server communication is involved).</p>
+<p>Calling this function multiple times on the same session
+(or on a serialized+deserialized copy) returns the same URL.
+Therefore, it’s recommended to call this function each time you need the URL,
+rather than storing the URL externally (e.g. in the user session).</p>
 </div>
 
 
@@ -874,7 +903,7 @@ either here or in the session’s default options.</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line188">line 188</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line160">line 160</a>
     </li></ul></dd>
     
 
@@ -911,6 +940,168 @@ either here or in the session’s default options.</p></td>
     <dd>
         
 <span class="param-type">string</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="isCompleteOAuthSession"><span class="type-signature"></span>isCompleteOAuthSession<span class="signature">(session)</span><span class="type-signature"> &rarr; {boolean}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Determine whether the session is complete.</p>
+<p>If this function returns true,
+then the session was successfully <a href="global.html#completeOAuthSession">completed</a>
+and can be used to make authenticated requests.
+(This doesn’t guarantee that the requests will succeed,
+as the user may have revoked the permission in the meantime.)
+If the function returns false, then the session has not been completed yet,
+and you should call <a href="global.html#initOAuthSession">initOAuthSession</a> and send the user to the returned authorization URL.</p>
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>session</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Session</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line308">line 308</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">boolean</span>
 
 
     </dd>
@@ -1082,7 +1273,7 @@ either here or in the session’s default options.</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line357">line 357</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line330">line 330</a>
     </li></ul></dd>
     
 
@@ -1272,7 +1463,7 @@ currently does nothing.</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line416">line 416</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line389">line 389</a>
     </li></ul></dd>
     
 
@@ -1454,44 +1645,6 @@ Defaults to true.</p></td>
 
         <tr>
             
-                <td class="name"><code>'m3api-oauth2/requireCrypto'</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">boolean</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last"><p>Whether to require the Web Crypto API to generate and hash the PKCE code verifier.
-If false, and the Web Crypto API is not available,
-m3api-oauth2 will fall back to Math.random() (non-cryptographically secure pseudo-random numbers)
-to generate the code verifier, and will send it unhashed;
-this allows using m3api-oauth2 on Node 12.
-If true, m3api-oauth2 will instead throw a <a href="NoWebCryptoApiError.html">NoWebCryptoApiError</a>
-if the Web Crypto API is unavailable.
-Defaults to false.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
                 <td class="name"><code>'m3api-oauth2/autoRefresh'</code></td>
             
 
@@ -1559,7 +1712,7 @@ but it’s used internally to avoid an infinite refresh loop.</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line60">line 60</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line34">line 34</a>
     </li></ul></dd>
     
 
@@ -1589,13 +1742,13 @@ but it’s used internally to avoid an infinite refresh loop.</p></td>
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="NoWebCryptoApiError.html">NoWebCryptoApiError</a></li><li><a href="OAuthClient.html">OAuthClient</a></li></ul><h3>Global</h3><ul><li><a href="global.html#completeOAuthSession">completeOAuthSession</a></li><li><a href="global.html#deserializeOAuthSession">deserializeOAuthSession</a></li><li><a href="global.html#handleInvalidAuthorizationError">handleInvalidAuthorizationError</a></li><li><a href="global.html#initOAuthSession">initOAuthSession</a></li><li><a href="global.html#refreshOAuthSession">refreshOAuthSession</a></li><li><a href="global.html#serializeOAuthSession">serializeOAuthSession</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="OAuthClient.html">OAuthClient</a></li></ul><h3>Global</h3><ul><li><a href="global.html#completeOAuthSession">completeOAuthSession</a></li><li><a href="global.html#deserializeOAuthSession">deserializeOAuthSession</a></li><li><a href="global.html#handleInvalidAuthorizationError">handleInvalidAuthorizationError</a></li><li><a href="global.html#initOAuthSession">initOAuthSession</a></li><li><a href="global.html#isCompleteOAuthSession">isCompleteOAuthSession</a></li><li><a href="global.html#refreshOAuthSession">refreshOAuthSession</a></li><li><a href="global.html#serializeOAuthSession">serializeOAuthSession</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a>
 </footer>
 
 <script>document.addEventListener('DOMContentLoaded', function () { prettyPrint(); });</script>

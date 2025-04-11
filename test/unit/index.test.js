@@ -171,6 +171,8 @@ describe( 'completeOAuthSession', () => {
 
 			await completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE', options );
 			expect( session.defaultOptions )
+				.to.have.property( 'accessToken', 'ACCESSTOKEN' );
+			expect( session.defaultOptions )
 				.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
 			expect( called ).to.be.true;
 		} );
@@ -206,6 +208,8 @@ describe( 'completeOAuthSession', () => {
 		deserializeOAuthSession( session, { codeVerifier: 'CODEVERIFIER' } );
 
 		await completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE' );
+		expect( session.defaultOptions )
+			.to.have.property( 'accessToken', 'ACCESSTOKEN' );
 		expect( session.defaultOptions )
 			.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
 		expect( called ).to.be.true;
@@ -523,6 +527,7 @@ describe( 'deserializeOAuthSession', () => {
 	it( 'blank session', () => {
 		const session = new BaseTestSession( {}, clientOptions );
 		deserializeOAuthSession( session, {} );
+		expect( session.defaultOptions ).not.to.have.property( 'accessToken' );
 		expect( session.defaultOptions ).not.to.have.property( 'authorization' );
 	} );
 
@@ -536,16 +541,19 @@ describe( 'deserializeOAuthSession', () => {
 		// so just serialize it again to check that it’s there
 		expect( serializeOAuthSession( session ) )
 			.to.have.property( 'codeVerifier', 'CODEVERIFIER' );
+		expect( session.defaultOptions ).not.to.have.property( 'accessToken' );
 		expect( session.defaultOptions ).not.to.have.property( 'authorization' );
 	} );
 
 	describe( 'finished session', () => {
 
-		it( 'adds authorization and assert=user by default', () => {
+		it( 'adds accessToken, authorization and assert=user by default', () => {
 			const session = new BaseTestSession( {}, clientOptions );
 			deserializeOAuthSession( session, {
 				accessToken: 'ACCESSTOKEN',
 			} );
+			expect( session.defaultOptions )
+				.to.have.property( 'accessToken', 'ACCESSTOKEN' );
 			expect( session.defaultOptions )
 				.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
 			expect( session.defaultParams )

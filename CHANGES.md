@@ -8,6 +8,8 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 ## next (not yet released)
 
 - Added support for the new `accessToken` option in m3api.
+- Declared compatibility with m3api v0.9.0.
+  (v0.8.x remains supported.)
 - Updated dependencies.
 
 ## v0.3.3 (2025-03-27)

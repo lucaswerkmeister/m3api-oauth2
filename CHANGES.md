@@ -5,6 +5,10 @@ This file records the changes in each m3api-oauth2 release.
 The annotated tag (and GitHub release) for each version also lists the changes,
 but this file may sometimes contain later improvements (e.g. typo fixes).
 
+## next (not yet released)
+
+No changes yet.
+
 ## v0.3.4 (2025-04-11)
 
 - Added support for the new `accessToken` option in m3api.

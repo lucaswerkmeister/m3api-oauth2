@@ -13,7 +13,7 @@ jobs:
       - run: npm ci
       - run: npm test
         env:
-          MEDIAWIKI_FULL_SCRIPT_PATH: https://test.wikipedia.beta.wmflabs.org/w
+          MEDIAWIKI_FULL_SCRIPT_PATH: https://test.wikipedia.beta.wmcloud.org/w
           MEDIAWIKI_USERNAME: ${{ secrets.MEDIAWIKI_USERNAME }}
           MEDIAWIKI_PASSWORD: ${{ secrets.MEDIAWIKI_PASSWORD }}
           OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}

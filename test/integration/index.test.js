@@ -14,7 +14,7 @@ import {
 	deserializeOAuthSession,
 } from '../../index.js';
 
-const userAgent = 'm3api-oauth2-integration-tests (https://github.com/lucaswerkmeister/m3api-oauth2/)';
+const userAgent = 'm3api-oauth2-integration-tests (https://phabricator.wikimedia.org/tag/m3api/)';
 
 describe( 'm3api-oauth2', () => {
 

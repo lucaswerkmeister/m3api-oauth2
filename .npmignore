@@ -5,7 +5,7 @@
 # additional exclusions irrelevant for published packages
 /.env.example
 /.eslintrc.json
-/.github/
+/.gitlab-ci.yml
 /.wdio.cjs
 /RELEASE.md
 /jsdoc/

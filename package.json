@@ -11,11 +11,11 @@
 		"test:integration": "wdio run .wdio.js",
 		"doc": "jsdoc -c jsdoc/conf.json"
 	},
-	"homepage": "https://github.com/lucaswerkmeister/m3api-oauth2#readme",
-	"bugs": "https://github.com/lucaswerkmeister/m3api-oauth2/issues",
+	"homepage": "https://gitlab.wikimedia.org/repos/m3api/m3api-oauth2/#m3api-oauth2",
+	"bugs": "https://phabricator.wikimedia.org/tag/m3api/",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/lucaswerkmeister/m3api-oauth2.git"
+		"url": "git+https://gitlab.wikimedia.org/repos/m3api/m3api-oauth2.git"
 	},
 	"keywords": [
 		"mediawiki"
@@ -36,7 +36,7 @@
 		"@wdio/spec-reporter": "^8.12.2",
 		"chai": "^5.1.1",
 		"chai-as-promised": "^8.0.0",
-		"chromedriver": "^139.0.2",
+		"chromedriver": "^120.0.2",
 		"eslint": "^8.44.0",
 		"eslint-config-wikimedia": "^0.29.1",
 		"eslint-plugin-chai-friendly": "^1.0.1",

@@ -1,0 +1,119 @@
+include:
+  - project: repos/m3api/ci-templates
+    file: /test+release.yml
+  - project: repos/m3api/ci-templates
+    file: /mediawiki.yml
+
+stages:
+  - test
+  - release
+
+test-job:
+  extends: .test-job
+  variables:
+    MEDIAWIKI_FULL_SCRIPT_PATH: https://test.wikipedia.beta.wmcloud.org/w
+    MEDIAWIKI_USERNAME: $MEDIAWIKI_BETA_REAL_USERNAME
+    MEDIAWIKI_PASSWORD: $MEDIAWIKI_BETA_REAL_PASSWORD
+    OAUTH_CLIENT_ID: $MEDIAWIKI_BETA_OAUTH_CLIENT_ID
+    OAUTH_CLIENT_SECRET: $MEDIAWIKI_BETA_OAUTH_CLIENT_SECRET
+    OAUTH_NONCONFIDENTIAL_CLIENT_ID: $MEDIAWIKI_BETA_OAUTH_NONCONFIDENTIAL_CLIENT_ID
+    OAUTH_NONCONFIDENTIAL_CLIENT_SECRET: $MEDIAWIKI_BETA_OAUTH_NONCONFIDENTIAL_CLIENT_SECRET
+  image:
+    name: docker-registry.wikimedia.org/releng/node18-test-browser
+    entrypoint: [ "" ]
+
+test-slow-job:
+  extends: .mediawiki-job
+  stage: test
+  image:
+    name: docker-registry.wikimedia.org/releng/node20-test-browser-php81-composer
+    entrypoint: [ "" ]
+  before_script:
+    - |
+      (
+          umask go-rwx
+          openssl genrsa -out /var/tmp/private.key 2048
+          openssl rsa -in /var/tmp/private.key -pubout -out /var/tmp/public.key
+      )
+    - !reference [ .mediawiki-job, before_script ]
+    - |
+      # dynamic variables based on .mediawiki-job’s exported variables
+      export MEDIAWIKI_FULL_SCRIPT_PATH="${MEDIAWIKI_SERVER}${MEDIAWIKI_SCRIPT_PATH}"
+      export MEDIAWIKI_USERNAME=$MEDIAWIKI_ADMIN_USERNAME
+      export MEDIAWIKI_PASSWORD=$MEDIAWIKI_ADMIN_PASSWORD
+    - |
+      cd -- "$MEDIAWIKI_INSTALL_DIRECTORY"
+
+      # OAuth requires the user to have an email address set
+      php maintenance/run.php resetUserEmail \
+          --no-reset-password \
+          "$MEDIAWIKI_USERNAME" \
+          'mail@localhost'
+
+      # regular consumer
+      json=$(php maintenance/run.php $PWD/extensions/OAuth/maintenance/createOAuthConsumer.php \
+          --oauthVersion=2 \
+          --user="$MEDIAWIKI_USERNAME" \
+          --name='m3api-oauth2 CI consumer' \
+          --version="$(printf '%(%s)T')" \
+          --description='OAuth 2.0 consumer to test m3api-oauth2 in CI' \
+          --callbackUrl='http://localhost:12345/oauth/callback' \
+          --grants=editpage \
+          --approve \
+          --jsonOnSuccess
+      )
+      export OAUTH_CLIENT_ID=$(jq -r .key <<< "$json")
+      export OAUTH_CLIENT_SECRET=$(jq -r .secret <<< "$json")
+
+      # non-confidential consumer
+      json=$(php maintenance/run.php $PWD/extensions/OAuth/maintenance/createOAuthConsumer.php \
+          --oauthVersion=2 \
+          --user="$MEDIAWIKI_USERNAME" \
+          --name='m3api-oauth2 CI consumer (non-confidential)' \
+          --version="$(printf '%(%s)T')" \
+          --description='OAuth 2.0 consumer to test m3api-oauth2 in CI' \
+          --callbackUrl='http://localhost:12345/oauth/callback' \
+          --grants=editpage \
+          --oauth2IsNotConfidential \
+          --approve \
+          --jsonOnSuccess
+      )
+      export OAUTH_NONCONFIDENTIAL_CLIENT_ID=$(jq -r .key <<< "$json")
+      export OAUTH_NONCONFIDENTIAL_CLIENT_SECRET=$(jq -r .secret <<< "$json")
+
+      cd -
+  script:
+    - npm ci
+    - |
+      # install a Chromedriver version that matches the Chromium in the node20 image
+      npm i chromedriver@140
+    - npm run test:integration
+  variables:
+    MEDIAWIKI_EXTENSIONS: |
+      OAuth
+    MEDIAWIKI_LOCAL_SETTINGS:
+      expand: false
+      value: |
+        $wgOAuth2GrantExpirationInterval = 'PT30S';
+        $wgGroupPermissions['sysop']['mwoauthproposeconsumer'] = true;
+        $wgGroupPermissions['sysop']['mwoauthupdateownconsumer'] = true;
+        $wgGroupPermissions['sysop']['mwoauthmanageconsumer'] = true;
+        $wgGroupPermissions['sysop']['mwoauthsuppress'] = true;
+        $wgGroupPermissions['sysop']['mwoauthviewsuppressed'] = true;
+        $wgGroupPermissions['sysop']['mwoauthviewprivate'] = true;
+        $wgGroupPermissions['sysop']['mwoauthmanagemygrants'] = true;
+        $wgOAuth2PrivateKey = '/var/tmp/private.key';
+        $wgOAuth2PublicKey = '/var/tmp/public.key';
+    SLOW_TEST_SLEEP: 35
+
+test-package-lock-job:
+  extends: .test-package-lock-job
+
+release-job:
+  extends: .release-job
+
+publish-job:
+  extends: .publish-job
+
+doc-job:
+  extends: .doc-job

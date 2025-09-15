@@ -172,8 +172,6 @@ describe( 'completeOAuthSession', () => {
 			await completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE', options );
 			expect( session.defaultOptions )
 				.to.have.property( 'accessToken', 'ACCESSTOKEN' );
-			expect( session.defaultOptions )
-				.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
 			expect( called ).to.be.true;
 		} );
 	}
@@ -210,8 +208,6 @@ describe( 'completeOAuthSession', () => {
 		await completeOAuthSession( session, 'http://localhost:12345/oauth/callback?code=CODE' );
 		expect( session.defaultOptions )
 			.to.have.property( 'accessToken', 'ACCESSTOKEN' );
-		expect( session.defaultOptions )
-			.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
 		expect( called ).to.be.true;
 	} );
 
@@ -370,6 +366,7 @@ describe( 'isCompleteOAuthSession', () => {
 		// but it’s not complete from m3api-oauth2’s perspective)
 		const session = new BaseTestSession( {}, {
 			...clientOptions,
+			accessToken: 'some-owner-only-client-token',
 			authorization: 'Bearer some-owner-only-client-token',
 		} );
 		expect( isCompleteOAuthSession( session ) )
@@ -547,15 +544,13 @@ describe( 'deserializeOAuthSession', () => {
 
 	describe( 'finished session', () => {
 
-		it( 'adds accessToken, authorization and assert=user by default', () => {
+		it( 'adds accessToken and assert=user by default', () => {
 			const session = new BaseTestSession( {}, clientOptions );
 			deserializeOAuthSession( session, {
 				accessToken: 'ACCESSTOKEN',
 			} );
 			expect( session.defaultOptions )
 				.to.have.property( 'accessToken', 'ACCESSTOKEN' );
-			expect( session.defaultOptions )
-				.to.have.property( 'authorization', 'Bearer ACCESSTOKEN' );
 			expect( session.defaultParams )
 				.to.have.property( 'assert', 'user' );
 		} );

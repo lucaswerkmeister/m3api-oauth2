@@ -435,8 +435,6 @@ function deserializeOAuthSession( session, serialization, options = {} ) {
 			writable: true,
 		} );
 		session.defaultOptions.accessToken = accessToken;
-		// for compatibility with m3api <=v0.8.4 only, can be removed later:
-		session.defaultOptions.authorization = `Bearer ${ accessToken }`;
 		if ( assert ) {
 			session.defaultParams.assert = 'user';
 		}

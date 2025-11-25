@@ -3,7 +3,7 @@ import process from 'process';
 export const config = {
 	specs: [ 'test/integration/*.js' ],
 	capabilities: [ {
-		browserName: 'chrome',
+		browserName: 'chromium',
 		'goog:chromeOptions': {
 			args: process.env.CI ? [ 'headless', 'disable-gpu' ] : [],
 		},

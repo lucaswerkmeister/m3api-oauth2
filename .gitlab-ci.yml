@@ -45,10 +45,6 @@ test-slow-job:
     - |
       cd -- "$MEDIAWIKI_INSTALL_DIRECTORY"
 
-      # mitigate T409637 by checking out an older commit (hopefully temporary)
-      git -C extensions/OAuth fetch --unshallow
-      git -C extensions/OAuth switch -d c7c9d5f9b5^
-
       # OAuth requires the user to have an email address set
       php maintenance/run.php resetUserEmail \
           --no-reset-password \

@@ -27,7 +27,7 @@ test-slow-job:
   extends: .mediawiki-job
   stage: test
   image:
-    name: docker-registry.wikimedia.org/releng/node20-test-browser-php81-composer
+    name: docker-registry.wikimedia.org/releng/node20-test-browser-php83-composer
     entrypoint: [ "" ]
   before_script:
     - |

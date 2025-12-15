@@ -4,6 +4,9 @@
 import {
 	DEFAULT_OPTIONS,
 } from 'm3api/core.js';
+import {
+	postForJson,
+} from 'm3api-rest';
 
 /**
  * Get an instance of the Web Crypto API.
@@ -257,8 +260,6 @@ async function completeOAuthSession( session, callbackUrl, options = {} ) {
 		...session.defaultOptions,
 		...options,
 	};
-	const restUrl = session.apiUrl.replace( /api\.php$/, 'rest.php' );
-	const accessTokenUrl = `${ restUrl }/oauth2/access_token`;
 	const code = new URL( callbackUrl, 'http://ignored.invalid' ).searchParams.get( 'code' );
 	const codeVerifier = session[ codeVerifierSymbol ];
 	delete session[ codeVerifierSymbol ];
@@ -269,21 +270,17 @@ async function completeOAuthSession( session, callbackUrl, options = {} ) {
 	if ( client[ clientSecretSymbol ] !== null ) {
 		clientParams.client_secret = client[ clientSecretSymbol ];
 	}
-	const { status, body } = await session.internalPost( accessTokenUrl, {}, {
+	const {
+		access_token: accessToken,
+		refresh_token: refreshToken,
+	} = await postForJson( session, '/oauth2/access_token', new URLSearchParams( {
 		grant_type: 'authorization_code',
 		code,
 		...clientParams,
 		code_verifier: codeVerifier,
-	}, { 'user-agent': session.getUserAgent( options ) } );
-
-	if ( status !== 200 ) {
-		throw new Error( `OAuth request returned non-200 HTTP status code: ${ status }` );
-	}
-
-	const {
-		access_token: accessToken,
-		refresh_token: refreshToken,
-	} = body;
+	} ), {
+		accessToken: null, // don’t send an access token with this request
+	} );
 	deserializeOAuthSession(
 		session,
 		{ accessToken, refreshToken },
@@ -336,26 +333,20 @@ async function refreshOAuthSession( session, options = {} ) {
 		...session.defaultOptions,
 		...options,
 	};
-	const restUrl = session.apiUrl.replace( /api\.php$/, 'rest.php' );
-	const accessTokenUrl = `${ restUrl }/oauth2/access_token`;
 	const clientParams = { client_id: client.clientId };
 	if ( client[ clientSecretSymbol ] !== null ) {
 		clientParams.client_secret = client[ clientSecretSymbol ];
 	}
-	const { status, body } = await session.internalPost( accessTokenUrl, {}, {
-		grant_type: 'refresh_token',
-		refresh_token: session[ refreshTokenSymbol ],
-		...clientParams,
-	}, { 'user-agent': session.getUserAgent( options ) } );
-
-	if ( status !== 200 ) {
-		throw new Error( `OAuth request returned non-200 HTTP status code: ${ status }` );
-	}
-
 	const {
 		access_token: accessToken,
 		refresh_token: refreshToken = session[ refreshTokenSymbol ],
-	} = body;
+	} = await postForJson( session, '/oauth2/access_token', new URLSearchParams( {
+		grant_type: 'refresh_token',
+		refresh_token: session[ refreshTokenSymbol ],
+		...clientParams,
+	} ), {
+		accessToken: null, // don’t send the old access token with this request
+	} );
 	deserializeOAuthSession(
 		session,
 		{ accessToken, refreshToken },

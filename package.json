@@ -26,7 +26,10 @@
 		"node": ">=18.2.0"
 	},
 	"peerDependencies": {
-		"m3api": "~1.0.0"
+		"m3api": "^1.0.0"
+	},
+	"dependencies": {
+		"m3api-rest": "^0.1.0"
 	},
 	"devDependencies": {
 		"@sinonjs/fake-timers": "^14.0.0",

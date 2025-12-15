@@ -7,7 +7,8 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 
 ## next (not yet released)
 
-No changes yet.
+- Internal improvements, including using [m3api-rest][].
+  There should be no impact on users of the package.
 
 ## v1.0.2 (2025-11-08)
 
@@ -101,3 +102,5 @@ Initial release, including:
 - The `serializeOAuthSession()` and `deserializeOAuthSession()` functions,
   to serialize the OAuth state of a session between requests.
 - PKCE support, for non-confidential clients without a client secret.
+
+[m3api-rest]: https://www.npmjs.com/package/m3api-rest

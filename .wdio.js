@@ -1,17 +1,22 @@
 import { mkdir } from 'node:fs/promises';
 import process from 'node:process';
 
+export const userAgent = 'm3api-oauth2-integration-tests (https://phabricator.wikimedia.org/tag/m3api/)';
+
 export const config = {
 	specs: [ 'test/integration/*.js' ],
 	capabilities: [ {
 		browserName: 'chromium',
 		'goog:chromeOptions': {
-			args: process.env.CI ? [
-				'--disable-dev-shm-usage',
-				'--disable-gpu',
-				'--headless=new',
-				'--no-sandbox',
-			] : [],
+			args: [
+				...( process.env.CI ? [
+					'--disable-dev-shm-usage',
+					'--disable-gpu',
+					'--headless=new',
+					'--no-sandbox',
+				] : [] ),
+				`user-agent=${ userAgent }`,
+			],
 		},
 	} ],
 	logLevel: 'info',

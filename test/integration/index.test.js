@@ -13,8 +13,7 @@ import {
 	serializeOAuthSession,
 	deserializeOAuthSession,
 } from '../../index.js';
-
-const userAgent = 'm3api-oauth2-integration-tests (https://phabricator.wikimedia.org/tag/m3api/)';
+import { userAgent } from '../../.wdio.js';
 
 describe( 'm3api-oauth2', () => {
 

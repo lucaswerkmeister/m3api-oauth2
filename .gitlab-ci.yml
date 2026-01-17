@@ -24,6 +24,10 @@ test-job:
     entrypoint: [ "" ]
   tags:
     - wmcs
+  artifacts:
+    paths:
+      - "test-artifacts/*"
+    when: on_failure
 
 test-slow-job:
   extends: .mediawiki-job
@@ -33,6 +37,10 @@ test-slow-job:
     entrypoint: [ "" ]
   tags:
     - wmcs
+  artifacts:
+    paths:
+      - "test-artifacts/*"
+    when: on_failure
   before_script:
     - |
       (

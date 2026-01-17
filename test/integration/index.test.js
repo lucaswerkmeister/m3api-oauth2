@@ -111,7 +111,12 @@ describe( 'm3api-oauth2', () => {
 		}
 	} );
 
-	before( 'log in', async () => {
+	let loggedIn = false;
+
+	async function logIn() {
+		if ( loggedIn ) {
+			return;
+		}
 		if (
 			!mediawikiFullScriptPath ||
 			!mediawikiUsername || !mediawikiPassword ||
@@ -131,7 +136,8 @@ describe( 'm3api-oauth2', () => {
 		await browser.waitUntil( async () => { // eslint-disable-line arrow-body-style
 			return ( await browser.getUrl() ) === `${ mediawikiFullScriptPath }/index.php?title=Special:BlankPage&x=y`;
 		} );
-	} );
+		loggedIn = true;
+	}
 
 	for ( const [ description, clientFactory, supportsRefresh, callbackUrlFilter ] of [
 		[
@@ -164,6 +170,7 @@ describe( 'm3api-oauth2', () => {
 	] ) {
 		// eslint-disable-next-line no-loop-func
 		it( `node.js, ${ description }`, async () => {
+			await logIn();
 			const makeSession = () => new Session( `${ mediawikiFullScriptPath }/api.php`, {
 				formatversion: 2,
 			}, {
@@ -226,6 +233,7 @@ describe( 'm3api-oauth2', () => {
 			return;
 		}
 
+		await logIn();
 		const makeSession = () => new Session( `${ mediawikiFullScriptPath }/api.php`, {
 			formatversion: 2,
 		}, {

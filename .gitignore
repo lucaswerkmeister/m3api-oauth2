@@ -1,4 +1,5 @@
 # when adding entries here, also add them to .npmignore (usually)
 /doc/
 /node_modules/
+/test-artifacts/
 /.env

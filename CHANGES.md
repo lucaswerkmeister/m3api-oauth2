@@ -9,6 +9,7 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 
 - Internal improvements, including using [m3api-rest][].
   There should be no impact on users of the package.
+- Updated dependencies.
 
 ## v1.0.2 (2025-11-08)
 

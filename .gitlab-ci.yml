@@ -22,6 +22,8 @@ test-job:
   image:
     name: docker-registry.wikimedia.org/releng/node18-test-browser
     entrypoint: [ "" ]
+  tags:
+    - wmcs
 
 test-slow-job:
   extends: .mediawiki-job
@@ -29,6 +31,8 @@ test-slow-job:
   image:
     name: docker-registry.wikimedia.org/releng/node20-test-browser-php83-composer
     entrypoint: [ "" ]
+  tags:
+    - wmcs
   before_script:
     - |
       (

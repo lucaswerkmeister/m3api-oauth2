@@ -5,7 +5,12 @@ export const config = {
 	capabilities: [ {
 		browserName: 'chromium',
 		'goog:chromeOptions': {
-			args: process.env.CI ? [ 'headless', 'disable-gpu' ] : [],
+			args: process.env.CI ? [
+				'--disable-dev-shm-usage',
+				'--disable-gpu',
+				'--headless=new',
+				'--no-sandbox',
+			] : [],
 		},
 	} ],
 	logLevel: 'info',

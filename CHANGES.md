@@ -5,7 +5,7 @@ This file records the changes in each m3api-oauth2 release.
 The annotated tag (and GitLab release) for each version also lists the changes,
 but this file may sometimes contain later improvements (e.g. typo fixes).
 
-## next (not yet released)
+## v1.0.3 (2026-01-27)
 
 - Internal improvements, including using [m3api-rest][].
   There should be no impact on users of the package.

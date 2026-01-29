@@ -22,8 +22,6 @@ test-job:
   image:
     name: docker-registry.wikimedia.org/releng/node18-test-browser
     entrypoint: [ "" ]
-  tags:
-    - wmcs
   artifacts:
     paths:
       - "test-artifacts/*"
@@ -35,8 +33,6 @@ test-slow-job:
   image:
     name: docker-registry.wikimedia.org/releng/node20-test-browser-php83-composer
     entrypoint: [ "" ]
-  tags:
-    - wmcs
   artifacts:
     paths:
       - "test-artifacts/*"

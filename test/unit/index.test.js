@@ -554,142 +554,147 @@ describe( 'deserializeOAuthSession', () => {
 
 	} );
 
-	describe( 'automatic refresh', () => {
+	for ( const [ optionName, errorResponseFactory, expectedRejection ] of [
+		[ 'errorHandlers', () => Response.json( {
+			errors: [ { code: 'mwoauth-invalid-authorization' } ],
+		} ), /mwoauth-invalid-authorization/ ],
+		[ 'httpErrorHandlers', () => new Response( '', {
+			status: 401,
+			headers: {
+				'www-authenticate': 'Bearer realm="...", error="invalid_token"',
+			},
+		} ), /401/ ],
+	] ) {
+		describe( `automatic refresh (${ optionName })`, () => {
 
-		it( 'automatically refreshes and retries request', async () => {
-			let fetchCall = 0;
-			class TestSession extends BaseTestSession {
-				async fetch( resource, fetchOptions ) {
-					switch ( ++fetchCall ) {
-						case 1:
-							expect( fetchOptions ).to.have.property( 'method', 'GET' );
-							expect( resource.searchParams ).to.include( new URLSearchParams( {
-								action: 'query',
-							} ) );
-							return Response.json( {
-								errors: [ { code: 'mwoauth-invalid-authorization' } ],
-							} );
-						case 2:
-							expect( fetchOptions ).to.have.property( 'method', 'POST' );
-							expect( fetchOptions.body ).to.include( new URLSearchParams( {
-								grant_type: 'refresh_token',
-							} ) );
-							return Response.json( {
-								token_type: 'Bearer',
-								expires_in: 14400,
-								access_token: 'ACCESSTOKEN2',
-							} );
-						case 3:
-							expect( fetchOptions ).to.have.property( 'method', 'GET' );
-							expect( resource.searchParams ).to.include( new URLSearchParams( {
-								action: 'query',
-							} ) );
-							return Response.json( { response: true } );
-						default:
-							throw new Error( `Unexpected call #${ fetchCall }` );
+			it( 'automatically refreshes and retries request', async () => {
+				let fetchCall = 0;
+				class TestSession extends BaseTestSession {
+					async fetch( resource, fetchOptions ) {
+						switch ( ++fetchCall ) {
+							case 1:
+								expect( fetchOptions ).to.have.property( 'method', 'GET' );
+								expect( resource.searchParams ).to.include( new URLSearchParams( {
+									action: 'query',
+								} ) );
+								return errorResponseFactory();
+							case 2:
+								expect( fetchOptions ).to.have.property( 'method', 'POST' );
+								expect( fetchOptions.body ).to.include( new URLSearchParams( {
+									grant_type: 'refresh_token',
+								} ) );
+								return Response.json( {
+									token_type: 'Bearer',
+									expires_in: 14400,
+									access_token: 'ACCESSTOKEN2',
+								} );
+							case 3:
+								expect( fetchOptions ).to.have.property( 'method', 'GET' );
+								expect( resource.searchParams ).to.include( new URLSearchParams( {
+									action: 'query',
+								} ) );
+								return Response.json( { response: true } );
+							default:
+								throw new Error( `Unexpected call #${ fetchCall }` );
+						}
 					}
 				}
-			}
 
-			const session = new TestSession( {}, clientOptions );
-			deserializeOAuthSession( session, {
-				accessToken: 'ACCESSTOKEN1',
-				refreshToken: 'REFRESHTOKEN',
+				const session = new TestSession( {}, clientOptions );
+				deserializeOAuthSession( session, {
+					accessToken: 'ACCESSTOKEN1',
+					refreshToken: 'REFRESHTOKEN',
+				} );
+				expect( await session.request( { action: 'query' } ) )
+					.to.eql( { response: true } );
+				expect( fetchCall ).to.equal( 3 );
 			} );
-			expect( await session.request( { action: 'query' } ) )
-				.to.eql( { response: true } );
-			expect( fetchCall ).to.equal( 3 );
-		} );
 
-		it( 'does not retry if not enough time is left', async () => {
-			const clock = FakeTimers.createClock();
-			let fetchCall = 0;
-			class TestSession extends BaseTestSession {
-				async fetch( resource, fetchOptions ) {
-					switch ( ++fetchCall ) {
-						case 1:
-							expect( fetchOptions ).to.have.property( 'method', 'GET' );
-							expect( resource.searchParams ).to.include( new URLSearchParams( {
-								action: 'query',
-							} ) );
-							await clock.tickAsync( 1000 );
-							return Response.json( {
-								errors: [ { code: 'mwoauth-invalid-authorization' } ],
-							} );
-						case 2:
-							expect( fetchOptions ).to.have.property( 'method', 'POST' );
-							expect( fetchOptions.body ).to.include( new URLSearchParams( {
-								grant_type: 'refresh_token',
-							} ) );
-							return Response.json( {
-								token_type: 'Bearer',
-								expires_in: 14400,
-								access_token: 'ACCESSTOKEN2',
-							} );
-						default:
-							throw new Error( `Unexpected call #${ fetchCall }` );
+			it( 'does not retry if not enough time is left', async () => {
+				const clock = FakeTimers.createClock();
+				let fetchCall = 0;
+				class TestSession extends BaseTestSession {
+					async fetch( resource, fetchOptions ) {
+						switch ( ++fetchCall ) {
+							case 1:
+								expect( fetchOptions ).to.have.property( 'method', 'GET' );
+								expect( resource.searchParams ).to.include( new URLSearchParams( {
+									action: 'query',
+								} ) );
+								await clock.tickAsync( 1000 );
+								return errorResponseFactory();
+							case 2:
+								expect( fetchOptions ).to.have.property( 'method', 'POST' );
+								expect( fetchOptions.body ).to.include( new URLSearchParams( {
+									grant_type: 'refresh_token',
+								} ) );
+								return Response.json( {
+									token_type: 'Bearer',
+									expires_in: 14400,
+									access_token: 'ACCESSTOKEN2',
+								} );
+							default:
+								throw new Error( `Unexpected call #${ fetchCall }` );
+						}
 					}
 				}
-			}
 
-			const session = new TestSession( {}, {
-				...clientOptions,
-				clock,
+				const session = new TestSession( {}, {
+					...clientOptions,
+					clock,
+				} );
+				deserializeOAuthSession( session, {
+					accessToken: 'ACCESSTOKEN1',
+					refreshToken: 'REFRESHTOKEN',
+				} );
+				await expect( session.request( { action: 'query' }, { retryUntil: clock.now + 500 } ) )
+					.to.be.rejectedWith( expectedRejection );
+				expect( fetchCall ).to.equal( 2 );
+				expect( serializeOAuthSession( session ) )
+					.property( 'accessToken' )
+					.to.equal( 'ACCESSTOKEN2' );
 			} );
-			deserializeOAuthSession( session, {
-				accessToken: 'ACCESSTOKEN1',
-				refreshToken: 'REFRESHTOKEN',
-			} );
-			await expect( session.request( { action: 'query' }, { retryUntil: clock.now + 500 } ) )
-				.to.be.rejectedWith( /mwoauth-invalid-authorization/ );
-			expect( fetchCall ).to.equal( 2 );
-			expect( serializeOAuthSession( session ) )
-				.property( 'accessToken' )
-				.to.equal( 'ACCESSTOKEN2' );
-		} );
 
-		it( 'does not refresh more than once', async () => {
-			let fetchCall = 0;
-			class TestSession extends BaseTestSession {
-				async fetch( resource, fetchOptions ) {
-					switch ( ++fetchCall ) {
-						case 1:
-							expect( fetchOptions ).to.have.property( 'method', 'GET' );
-							return Response.json( {
-								errors: [ { code: 'mwoauth-invalid-authorization' } ],
-							} );
-						case 2:
-							expect( fetchOptions ).to.have.property( 'method', 'POST' );
-							expect( fetchOptions.body ).to.include( new URLSearchParams( {
-								grant_type: 'refresh_token',
-							} ) );
-							return Response.json( {
-								token_type: 'Bearer',
-								expires_in: 14400,
-								access_token: 'ACCESSTOKEN2',
-							} );
-						case 3:
-							expect( fetchOptions ).to.have.property( 'method', 'GET' );
-							// keep returning the same error even after refresh
-							return Response.json( {
-								errors: [ { code: 'mwoauth-invalid-authorization' } ],
-							} );
-						default:
-							throw new Error( `Unexpected call #${ fetchCall }` );
+			it( 'does not refresh more than once', async () => {
+				let fetchCall = 0;
+				class TestSession extends BaseTestSession {
+					async fetch( resource, fetchOptions ) {
+						switch ( ++fetchCall ) {
+							case 1:
+								expect( fetchOptions ).to.have.property( 'method', 'GET' );
+								return errorResponseFactory();
+							case 2:
+								expect( fetchOptions ).to.have.property( 'method', 'POST' );
+								expect( fetchOptions.body ).to.include( new URLSearchParams( {
+									grant_type: 'refresh_token',
+								} ) );
+								return Response.json( {
+									token_type: 'Bearer',
+									expires_in: 14400,
+									access_token: 'ACCESSTOKEN2',
+								} );
+							case 3:
+								expect( fetchOptions ).to.have.property( 'method', 'GET' );
+								// keep returning the same error even after refresh
+								return errorResponseFactory();
+							default:
+								throw new Error( `Unexpected call #${ fetchCall }` );
+						}
 					}
 				}
-			}
 
-			const session = new TestSession( {}, clientOptions );
-			deserializeOAuthSession( session, {
-				accessToken: 'ACCESSTOKEN1',
-				refreshToken: 'REFRESHTOKEN',
+				const session = new TestSession( {}, clientOptions );
+				deserializeOAuthSession( session, {
+					accessToken: 'ACCESSTOKEN1',
+					refreshToken: 'REFRESHTOKEN',
+				} );
+				await expect( session.request( { action: 'query' } ) )
+					.to.be.rejectedWith( expectedRejection );
+				expect( fetchCall ).to.equal( 3 );
 			} );
-			await expect( session.request( { action: 'query' } ) )
-				.to.be.rejectedWith( /mwoauth-invalid-authorization/ );
-			expect( fetchCall ).to.equal( 3 );
+
 		} );
 
-	} );
+	}
 
 } );

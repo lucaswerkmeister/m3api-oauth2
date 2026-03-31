@@ -103,6 +103,43 @@ async function handleInvalidAuthorizationError( session, params, options ) {
 
 DEFAULT_OPTIONS.errorHandlers[ 'mwoauth-invalid-authorization' ] = handleInvalidAuthorizationError;
 
+async function handleWwwAuthenticateError( session, params, options, response ) {
+	const wwwAuthenticateHeader = response.headers.get( 'WWW-Authenticate' );
+	if ( wwwAuthenticateHeader === null ) {
+		return null;
+	}
+	if ( !wwwAuthenticateHeader.includes( 'error=invalid_token' ) &&
+		!wwwAuthenticateHeader.includes( 'error="invalid_token"' ) ) {
+		return null;
+	}
+
+	const {
+		clock: {
+			performance,
+		},
+		retryUntil,
+		'm3api-oauth2/autoRefresh': autoRefresh,
+	} = {
+		...DEFAULT_OPTIONS,
+		...session.defaultOptions,
+		...options,
+	};
+	if ( !autoRefresh ) {
+		return null;
+	}
+	await refreshOAuthSession( session, options );
+	if ( performance.now() <= retryUntil ) {
+		return session.request( params, {
+			...options,
+			'm3api-oauth2/autoRefresh': false,
+		} );
+	} else {
+		return null;
+	}
+}
+
+DEFAULT_OPTIONS.httpErrorHandlers.push( handleWwwAuthenticateError );
+
 /** @private */
 const clientSecretSymbol = Symbol( 'OAuthClient.clientSecret' );
 /** @private */

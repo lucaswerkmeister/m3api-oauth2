@@ -7,6 +7,9 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 
 ## next (not yet released)
 
+- Fixed the automatic handling of expired access tokens
+  (including retrying the request) on Wikimedia wikis,
+  which had been broken due to [T419034][].
 - Updated dependencies, including m3api v1.1.0.
 
 ## v1.0.3 (2026-01-27)
@@ -109,3 +112,4 @@ Initial release, including:
 - PKCE support, for non-confidential clients without a client secret.
 
 [m3api-rest]: https://www.npmjs.com/package/m3api-rest
+[T419034]: https://phabricator.wikimedia.org/T419034

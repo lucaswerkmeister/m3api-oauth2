@@ -107,11 +107,13 @@ const session = new Session( 'en.wikipedia.org', {}, {
 } );
 ```
 
-Whether a non-confidential client should be used with or without its secret
-is currently up for discussion in [T323867][];
-note that without a client secret,
-the session currently cannot be refreshed ([T323855][]),
-so in that case you would need to go through the authorization flow again after ca. four hours.
+When targeting Wikimedia wikis, both should work equally well:
+you can include the client secret in your app (and treat it as not secret at all),
+or you can leave it out, whichever you prefer.
+For other wikis, note that [T323855][], a bug in refresh token handling, was only fixed in MediaWiki 1.46;
+if the wiki you are targeting is not on a fixed version yet,
+it’s best to include the client secret.
+(See also [T323867][] for some discussion of how secrets of non-confidential clients should be handled.)
 
 ## Terminology
 

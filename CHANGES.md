@@ -5,7 +5,7 @@ This file records the changes in each m3api-oauth2 release.
 The annotated tag (and GitLab release) for each version also lists the changes,
 but this file may sometimes contain later improvements (e.g. typo fixes).
 
-## next (not yet released)
+## v1.0.4 (2026-04-05)
 
 - Fixed the automatic handling of expired access tokens
   (including retrying the request) on Wikimedia wikis,

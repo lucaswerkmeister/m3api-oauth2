@@ -34,13 +34,13 @@ class BaseTestSession extends Session {
 }
 
 class SuccessfulTestSession extends BaseTestSession {
-	async internalPost() {
-		return { status: 200, headers: {}, body: {
+	async fetch() {
+		return Response.json( {
 			token_type: 'Bearer',
 			expires_in: 14400,
 			access_token: 'ACCESSTOKEN',
 			refresh_token: 'REFRESHTOKEN',
-		} };
+		} );
 	}
 }
 
@@ -141,28 +141,24 @@ describe( 'completeOAuthSession', () => {
 		it( `gets client from ${ name } and gets access token`, async () => {
 			let called = false;
 			class TestSession extends BaseTestSession {
-				async internalPost( apiUrl, urlParams, bodyParams ) {
-					expect( apiUrl ).to.equal( 'https://en.wikipedia.org/w/rest.php/oauth2/access_token' );
-					expect( urlParams ).to.eql( {} );
-					expect( bodyParams ).to.eql( {
+				async fetch( resource, fetchOptions ) {
+					expect( resource ).to.eql( new URL( 'https://en.wikipedia.org/w/rest.php/oauth2/access_token' ) );
+					expect( fetchOptions ).to.have.property( 'method', 'POST' );
+					expect( fetchOptions ).to.have.deep.property( 'body', new URLSearchParams( {
 						grant_type: 'authorization_code',
 						code: 'CODE',
 						client_id: 'CLIENTID',
 						client_secret: 'CLIENTSECRET',
 						code_verifier: 'CODEVERIFIER',
-					} );
+					} ) );
 					expect( called, 'not called yet' ).to.be.false;
 					called = true;
-					return {
-						status: 200,
-						headers: {},
-						body: {
-							token_type: 'Bearer',
-							expires_in: 14400,
-							access_token: 'ACCESSTOKEN',
-							refresh_token: 'REFRESHTOKEN',
-						},
-					};
+					return Response.json( {
+						token_type: 'Bearer',
+						expires_in: 14400,
+						access_token: 'ACCESSTOKEN',
+						refresh_token: 'REFRESHTOKEN',
+					} );
 				}
 			}
 
@@ -179,26 +175,22 @@ describe( 'completeOAuthSession', () => {
 	it( 'supports non-confidential client', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {
-			async internalPost( apiUrl, urlParams, bodyParams ) {
-				expect( bodyParams ).to.eql( {
+			async fetch( resource, fetchOptions ) {
+				expect( fetchOptions ).to.have.deep.property( 'body', new URLSearchParams( {
 					grant_type: 'authorization_code',
 					code: 'CODE',
 					client_id: 'NONCONFIDENTIAL-CLIENTID',
 					// no client_secret
 					code_verifier: 'CODEVERIFIER',
-				} );
+				} ) );
 				expect( called, 'not called yet' ).to.be.false;
 				called = true;
-				return {
-					status: 200,
-					headers: {},
-					body: {
-						token_type: 'Bearer',
-						expires_in: 14400,
-						access_token: 'ACCESSTOKEN',
-						refresh_token: 'REFRESHTOKEN',
-					},
-				};
+				return Response.json( {
+					token_type: 'Bearer',
+					expires_in: 14400,
+					access_token: 'ACCESSTOKEN',
+					refresh_token: 'REFRESHTOKEN',
+				} );
 			}
 		}
 
@@ -214,20 +206,18 @@ describe( 'completeOAuthSession', () => {
 	it( 'supports relative callback URL', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {
-			async internalPost( apiUrl, urlParams, bodyParams ) {
-				expect( bodyParams ).to.have.property( 'code', 'CODE' );
+			async fetch( resource, fetchOptions ) {
+				expect( fetchOptions.body ).to.include( new URLSearchParams( {
+					code: 'CODE',
+				} ) );
 				expect( called, 'not called yet' ).to.be.false;
 				called = true;
-				return {
-					status: 200,
-					headers: {},
-					body: {
-						token_type: 'Bearer',
-						expires_in: 14400,
-						access_token: 'ACCESSTOKEN',
-						refresh_token: 'REFRESHTOKEN',
-					},
-				};
+				return Response.json( {
+					token_type: 'Bearer',
+					expires_in: 14400,
+					access_token: 'ACCESSTOKEN',
+					refresh_token: 'REFRESHTOKEN',
+				} );
 			}
 		}
 		const session = new TestSession( {}, {
@@ -237,25 +227,20 @@ describe( 'completeOAuthSession', () => {
 		expect( called ).to.be.true;
 	} );
 
-	it( 'passes user agent into internalPost()', async () => {
+	it( 'passes user agent into fetch()', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {
-			async internalPost( apiUrl, urlParams, bodyParams, headers ) {
-				expect( headers )
-					.to.have.property( 'user-agent' )
-					.to.match( /^my-user-agent / );
+			async fetch( resource, fetchOptions ) {
+				const userAgent = new Headers( fetchOptions.headers ).get( 'User-Agent' );
+				expect( userAgent ).to.match( /^my-user-agent / );
 				expect( called, 'not called yet' ).to.be.false;
 				called = true;
-				return {
-					status: 200,
-					headers: {},
-					body: {
-						token_type: 'Bearer',
-						expires_in: 14400,
-						access_token: 'ACCESSTOKEN',
-						refresh_token: 'REFRESHTOKEN',
-					},
-				};
+				return Response.json( {
+					token_type: 'Bearer',
+					expires_in: 14400,
+					access_token: 'ACCESSTOKEN',
+					refresh_token: 'REFRESHTOKEN',
+				} );
 			}
 		}
 
@@ -292,9 +277,9 @@ describe( 'completeOAuthSession', () => {
 	it( 'throws if code is missing', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {
-			async internalPost() {
+			async fetch() {
 				called = true;
-				expect.fail( 'this test should not call internalPost()' );
+				expect.fail( 'this test should not call fetch()' );
 			}
 		}
 
@@ -307,14 +292,12 @@ describe( 'completeOAuthSession', () => {
 	it( 'throws if status is not 200', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {
-			async internalPost() {
+			async fetch() {
 				expect( called, 'not called yet' ).to.be.false;
 				called = true;
-				return {
+				return Response.json( {}, {
 					status: 500,
-					headers: {},
-					body: {},
-				};
+				} );
 			}
 		}
 
@@ -380,27 +363,22 @@ describe( 'refreshOAuthSession', () => {
 	it( 'renews access token and refresh token', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {
-			async internalPost( apiUrl, urlParams, bodyParams ) {
-				expect( apiUrl ).to.equal( 'https://en.wikipedia.org/w/rest.php/oauth2/access_token' );
-				expect( urlParams ).to.eql( {} );
-				expect( bodyParams ).to.eql( {
+			async fetch( resource, fetchOptions ) {
+				expect( resource ).to.eql( new URL( 'https://en.wikipedia.org/w/rest.php/oauth2/access_token' ) );
+				expect( fetchOptions ).to.have.deep.property( 'body', new URLSearchParams( {
 					grant_type: 'refresh_token',
 					refresh_token: 'REFRESHTOKEN1',
 					client_id: 'CLIENTID',
 					client_secret: 'CLIENTSECRET',
-				} );
+				} ) );
 				expect( called, 'not called yet' ).to.be.false;
 				called = true;
-				return {
-					status: 200,
-					headers: {},
-					body: {
-						token_type: 'Bearer',
-						expires_in: 14400,
-						access_token: 'ACCESSTOKEN2',
-						refresh_token: 'REFRESHTOKEN2',
-					},
-				};
+				return Response.json( {
+					token_type: 'Bearer',
+					expires_in: 14400,
+					access_token: 'ACCESSTOKEN2',
+					refresh_token: 'REFRESHTOKEN2',
+				} );
 			}
 		}
 
@@ -420,19 +398,15 @@ describe( 'refreshOAuthSession', () => {
 	it( 'keeps old refresh token if no new refresh token returned', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {
-			async internalPost() {
+			async fetch() {
 				expect( called, 'not called yet' ).to.be.false;
 				called = true;
-				return {
-					status: 200,
-					headers: {},
-					body: {
-						token_type: 'Bearer',
-						expires_in: 14400,
-						access_token: 'ACCESSTOKEN2',
-						// no refresh_token
-					},
-				};
+				return Response.json( {
+					token_type: 'Bearer',
+					expires_in: 14400,
+					access_token: 'ACCESSTOKEN2',
+					// no refresh_token
+				} );
 			}
 		}
 
@@ -452,25 +426,21 @@ describe( 'refreshOAuthSession', () => {
 	it( 'supports non-confidential client', async () => {
 		let called = false;
 		class TestSession extends BaseTestSession {
-			async internalPost( apiUrl, urlParams, bodyParams ) {
-				expect( bodyParams ).to.eql( {
+			async fetch( resource, fetchOptions ) {
+				expect( fetchOptions ).to.have.deep.property( 'body', new URLSearchParams( {
 					grant_type: 'refresh_token',
 					refresh_token: 'REFRESHTOKEN1',
 					client_id: 'NONCONFIDENTIAL-CLIENTID',
 					// no client_secret
-				} );
+				} ) );
 				expect( called, 'not called yet' ).to.be.false;
 				called = true;
-				return {
-					status: 200,
-					headers: {},
-					body: {
-						token_type: 'Bearer',
-						expires_in: 14400,
-						access_token: 'ACCESSTOKEN2',
-						refresh_token: 'REFRESHTOKEN2',
-					},
-				};
+				return Response.json( {
+					token_type: 'Bearer',
+					expires_in: 14400,
+					access_token: 'ACCESSTOKEN2',
+					refresh_token: 'REFRESHTOKEN2',
+				} );
 			}
 		}
 
@@ -587,46 +557,37 @@ describe( 'deserializeOAuthSession', () => {
 	describe( 'automatic refresh', () => {
 
 		it( 'automatically refreshes and retries request', async () => {
-			let internalPostCalled = false;
-			let internalGetCall = 0;
+			let fetchCall = 0;
 			class TestSession extends BaseTestSession {
-				async internalPost( apiUrl, urlParams, bodyParams ) {
-					expect( bodyParams ).property( 'grant_type' ).to.equal( 'refresh_token' );
-					expect( internalPostCalled, 'not called yet' ).to.be.false;
-					internalPostCalled = true;
-					return {
-						status: 200,
-						headers: {},
-						body: {
-							token_type: 'Bearer',
-							expires_in: 14400,
-							access_token: 'ACCESSTOKEN2',
-						},
-					};
-				}
-
-				async internalGet( apiUrl, params ) {
-					expect( params ).to.eql( {
-						action: 'query',
-						assert: 'user',
-						format: 'json',
-					} );
-					let body;
-					switch ( ++internalGetCall ) {
+				async fetch( resource, fetchOptions ) {
+					switch ( ++fetchCall ) {
 						case 1:
-							body = { errors: [ { code: 'mwoauth-invalid-authorization' } ] };
-							break;
+							expect( fetchOptions ).to.have.property( 'method', 'GET' );
+							expect( resource.searchParams ).to.include( new URLSearchParams( {
+								action: 'query',
+							} ) );
+							return Response.json( {
+								errors: [ { code: 'mwoauth-invalid-authorization' } ],
+							} );
 						case 2:
-							body = { response: true };
-							break;
+							expect( fetchOptions ).to.have.property( 'method', 'POST' );
+							expect( fetchOptions.body ).to.include( new URLSearchParams( {
+								grant_type: 'refresh_token',
+							} ) );
+							return Response.json( {
+								token_type: 'Bearer',
+								expires_in: 14400,
+								access_token: 'ACCESSTOKEN2',
+							} );
+						case 3:
+							expect( fetchOptions ).to.have.property( 'method', 'GET' );
+							expect( resource.searchParams ).to.include( new URLSearchParams( {
+								action: 'query',
+							} ) );
+							return Response.json( { response: true } );
 						default:
-							throw new Error( `Unexpected call #${ internalGetCall }` );
+							throw new Error( `Unexpected call #${ fetchCall }` );
 					}
-					return {
-						status: 200,
-						headers: {},
-						body,
-					};
 				}
 			}
 
@@ -637,84 +598,85 @@ describe( 'deserializeOAuthSession', () => {
 			} );
 			expect( await session.request( { action: 'query' } ) )
 				.to.eql( { response: true } );
-			expect( internalPostCalled ).to.be.true;
-			expect( internalGetCall ).to.equal( 2 );
+			expect( fetchCall ).to.equal( 3 );
 		} );
 
 		it( 'does not retry if not enough time is left', async () => {
-			const clock = FakeTimers.install();
-			let internalPostCalled = false;
-			let internalGetCalled = false;
+			const clock = FakeTimers.createClock();
+			let fetchCall = 0;
 			class TestSession extends BaseTestSession {
-				async internalPost( apiUrl, urlParams, bodyParams ) {
-					expect( bodyParams ).property( 'grant_type' ).to.equal( 'refresh_token' );
-					expect( internalPostCalled, 'not called yet' ).to.be.false;
-					internalPostCalled = true;
-					return {
-						status: 200,
-						headers: {},
-						body: {
-							token_type: 'Bearer',
-							expires_in: 14400,
-							access_token: 'ACCESSTOKEN2',
-						},
-					};
-				}
-
-				async internalGet( apiUrl, params ) {
-					expect( params ).property( 'action' ).to.equal( 'query' );
-					expect( internalGetCalled, 'not called yet' ).to.be.false;
-					internalGetCalled = true;
-					await clock.tickAsync( 1000 );
-					return {
-						status: 200,
-						headers: {},
-						body: { errors: [ { code: 'mwoauth-invalid-authorization' } ] },
-					};
+				async fetch( resource, fetchOptions ) {
+					switch ( ++fetchCall ) {
+						case 1:
+							expect( fetchOptions ).to.have.property( 'method', 'GET' );
+							expect( resource.searchParams ).to.include( new URLSearchParams( {
+								action: 'query',
+							} ) );
+							await clock.tickAsync( 1000 );
+							return Response.json( {
+								errors: [ { code: 'mwoauth-invalid-authorization' } ],
+							} );
+						case 2:
+							expect( fetchOptions ).to.have.property( 'method', 'POST' );
+							expect( fetchOptions.body ).to.include( new URLSearchParams( {
+								grant_type: 'refresh_token',
+							} ) );
+							return Response.json( {
+								token_type: 'Bearer',
+								expires_in: 14400,
+								access_token: 'ACCESSTOKEN2',
+							} );
+						default:
+							throw new Error( `Unexpected call #${ fetchCall }` );
+					}
 				}
 			}
 
-			const session = new TestSession( {}, clientOptions );
+			const session = new TestSession( {}, {
+				...clientOptions,
+				clock,
+			} );
 			deserializeOAuthSession( session, {
 				accessToken: 'ACCESSTOKEN1',
 				refreshToken: 'REFRESHTOKEN',
 			} );
 			await expect( session.request( { action: 'query' }, { retryUntil: clock.now + 500 } ) )
 				.to.be.rejectedWith( /mwoauth-invalid-authorization/ );
-			expect( internalPostCalled ).to.be.true;
-			expect( internalGetCalled ).to.be.true;
+			expect( fetchCall ).to.equal( 2 );
 			expect( serializeOAuthSession( session ) )
 				.property( 'accessToken' )
 				.to.equal( 'ACCESSTOKEN2' );
 		} );
 
 		it( 'does not refresh more than once', async () => {
-			let internalPostCalled = false;
-			let internalGetCall = 0;
+			let fetchCall = 0;
 			class TestSession extends BaseTestSession {
-				async internalPost( apiUrl, urlParams, bodyParams ) {
-					expect( bodyParams ).property( 'grant_type' ).to.equal( 'refresh_token' );
-					expect( internalPostCalled, 'not called yet' ).to.be.false;
-					internalPostCalled = true;
-					return {
-						status: 200,
-						headers: {},
-						body: {
-							token_type: 'Bearer',
-							expires_in: 14400,
-							access_token: 'ACCESSTOKEN2',
-						},
-					};
-				}
-
-				async internalGet() {
-					internalGetCall++;
-					// keep returning the same error even after refresh
-					return {
-						status: 200,
-						headers: {},
-						body: { errors: [ { code: 'mwoauth-invalid-authorization' } ] },
-					};
+				async fetch( resource, fetchOptions ) {
+					switch ( ++fetchCall ) {
+						case 1:
+							expect( fetchOptions ).to.have.property( 'method', 'GET' );
+							return Response.json( {
+								errors: [ { code: 'mwoauth-invalid-authorization' } ],
+							} );
+						case 2:
+							expect( fetchOptions ).to.have.property( 'method', 'POST' );
+							expect( fetchOptions.body ).to.include( new URLSearchParams( {
+								grant_type: 'refresh_token',
+							} ) );
+							return Response.json( {
+								token_type: 'Bearer',
+								expires_in: 14400,
+								access_token: 'ACCESSTOKEN2',
+							} );
+						case 3:
+							expect( fetchOptions ).to.have.property( 'method', 'GET' );
+							// keep returning the same error even after refresh
+							return Response.json( {
+								errors: [ { code: 'mwoauth-invalid-authorization' } ],
+							} );
+						default:
+							throw new Error( `Unexpected call #${ fetchCall }` );
+					}
 				}
 			}
 
@@ -725,8 +687,7 @@ describe( 'deserializeOAuthSession', () => {
 			} );
 			await expect( session.request( { action: 'query' } ) )
 				.to.be.rejectedWith( /mwoauth-invalid-authorization/ );
-			expect( internalPostCalled ).to.be.true;
-			expect( internalGetCall ).to.equal( 2 );
+			expect( fetchCall ).to.equal( 3 );
 		} );
 
 	} );

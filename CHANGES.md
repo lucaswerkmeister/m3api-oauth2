@@ -7,7 +7,7 @@ but this file may sometimes contain later improvements (e.g. typo fixes).
 
 ## next (not yet released)
 
-No changes yet.
+- Updated dependencies, including m3api v1.1.0.
 
 ## v1.0.3 (2026-01-27)
 

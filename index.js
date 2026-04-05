@@ -77,6 +77,9 @@ Object.assign( DEFAULT_OPTIONS, {
  */
 async function handleInvalidAuthorizationError( session, params, options ) {
 	const {
+		clock: {
+			performance,
+		},
 		retryUntil,
 		'm3api-oauth2/autoRefresh': autoRefresh,
 	} = {
@@ -88,9 +91,6 @@ async function handleInvalidAuthorizationError( session, params, options ) {
 		return null;
 	}
 	await refreshOAuthSession( session, options );
-	if ( typeof performance !== 'object' ) {
-		throw new Error( 'performance global is required!' );
-	}
 	if ( performance.now() <= retryUntil ) {
 		return session.request( params, {
 			...options,

@@ -29,7 +29,7 @@
 		"m3api": "~1.1.0"
 	},
 	"dependencies": {
-		"m3api-rest": "^0.1.1"
+		"m3api-rest": "^0.2.0 || ^0.1.1"
 	},
 	"devDependencies": {
 		"@sinonjs/fake-timers": "^15.3.0",
